@@ -12,14 +12,13 @@ from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
 
+from runner import Runner
 from utils import find_scripts
 
 SCRIPTS_DIR = os.getenv('SC_SCRIPTS_DIR') or os.path.join(os.path.dirname(__file__), 'scripts')
+CONFIG_FILE = os.path.join(SCRIPTS_DIR, '.sc.conf')
 
 enable_pretty_logging()
-
-COLOR_YELLOW = '\033[1;33m'
-COLOR_RESET = '\x1B[0m'
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +37,8 @@ class RunScriptWs(WebSocketHandler):
         script = self.get_argument('script')
         pid, fd = pty.fork()
         if pid == 0:
-            print(COLOR_YELLOW + 'python %s' % script + COLOR_RESET, os.linesep)
-            os.execlp('python', 'python', os.path.join(SCRIPTS_DIR, script))
+            run = Runner(CONFIG_FILE)
+            run(os.path.join(SCRIPTS_DIR, script))
         else:
             self.log('Run script %r' % script, pid)
             self.fd = fd
@@ -65,11 +64,10 @@ class RunScriptWs(WebSocketHandler):
             os.kill(self.pid, signal.SIGKILL)
 
     def send(self, message):
-        if message:
-            try:
-                self.write_message(message)
-            except WebSocketClosedError:
-                pass
+        try:
+            self.write_message(message)
+        except WebSocketClosedError:
+            pass
 
     def loop(self):
         pid, status = os.waitpid(self.pid, os.WNOHANG)
