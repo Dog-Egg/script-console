@@ -2,3 +2,5 @@ tornado
 click
 gitignore_parser
 mock
+sqlalchemy
+aiosqlite

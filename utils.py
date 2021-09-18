@@ -1,16 +1,52 @@
+import fnmatch
 import os
+import random
+import string
 
 from gitignore_parser import parse_gitignore
 
+import settings
+from conf import Conf
 
-def find_scripts(root):
+
+def ignore_parser(group):
+    def get_permission_ignores():
+        if group == settings.ADMINISTRATOR:
+            return []
+
+        rv = []
+        conf = Conf(settings.CONFIG_FILE_PATH)
+        for c in conf.file_configs:
+            if c.groups and group not in c.groups:
+                rv.append(c.pattern)
+        return rv
+
     try:
-        ignore = parse_gitignore(os.path.join(root, '.scignore'))
+        ignore = parse_gitignore(settings.IGNORE_FILE_PATH)
     except FileNotFoundError:
         def ignore(_):
             return False
 
-    def _find_scripts(dir_path):
+    permission_ignores = get_permission_ignores()
+
+    def wrapper(path):
+        result = ignore(path)
+        if result:
+            return result
+
+        for p in permission_ignores:
+            if fnmatch.fnmatch(path, p):
+                return True
+        return False
+
+    return wrapper
+
+
+def find_scripts(group):
+    ignore = ignore_parser(group)
+    root = settings.SCRIPTS_DIR
+
+    def _find_scripts(dir_path) -> list:
         res = []
         for entry in os.scandir(dir_path):
             entry: os.DirEntry
@@ -29,11 +65,19 @@ def find_scripts(root):
         res = sorted(res, key=lambda x: 'children' not in x)
         return res
 
-    return _find_scripts(root)
+    rv = _find_scripts(root)
+
+    if group == settings.ADMINISTRATOR:
+        especial = [settings.IGNORE_FILENAME, settings.CONFIG_FILENAME]
+        for i in especial:
+            rv.append(dict(name=i, path=i, sys=True))
+    return rv
+
+
+def gen_token():
+    charset = random.choices(string.digits + string.ascii_letters, k=24)
+    return ''.join(charset)
 
 
 if __name__ == '__main__':
-    import pprint
-
-    d = os.path.join(os.path.dirname(__file__), 'scripts')
-    pprint.pprint(list(find_scripts(d)))
+    print(gen_token())

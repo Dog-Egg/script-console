@@ -1,84 +1,30 @@
-$aside-width: 25%;
-
-$red-color: #db5860;
-$green-color: #59a869;
-$disabled-color: #d9d9d9;
-
-#root {
-  height: 100vh;
-  padding: 30px 5%;
-}
-
 .app {
+  height: 100vh;
   display: flex;
-  border: 1px solid #ececec;
-  height: 100%;
-}
 
-.toolbar {
-  display: flex;
-  padding: 5px 15px;
-  background-color: rgba(236, 236, 236, 0.3);
+  & > aside {
+    position: relative;
+    .ant-menu {
+      height: 100%;
+      background-color: rgba(241, 241, 241, 0.3);
 
-  .operations {
-    display: flex;
-    align-items: center;
-    font-size: 1.5em;
-    .op {
-      cursor: pointer;
-      border-radius: 2px;
-      + .op {
-        margin-left: 15px;
+      &.ant-menu-inline-collapsed {
+        width: 50px;
       }
-      &:hover {
-        background-color: rgba(187, 187, 187, 0.3);
-      }
-      &-disabled {
-        color: $disabled-color !important;
-        cursor: default;
-        &:hover {
-          background-color: unset;
-        }
-      }
-      &-red {
-        color: $red-color;
-      }
-      &-green {
-        color: $green-color;
+      .ant-menu-item-icon {
+        font-size: 20px !important;
       }
     }
-  }
-
-  .search {
-    margin-left: auto;
-    .ant-input-group-addon {
-      .anticon {
-        user-select: none;
-        margin: 0 3px;
-        cursor: pointer;
-        &:hover {
-          transform: scale(1.1);
-        }
-        &:active {
-          transform: scale(0.9);
-        }
-      }
+    .github {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      font-size: 24px;
+      color: rgba(0, 0, 0, 0.7);
+      transform: translateX(-50%);
     }
   }
-}
-
-aside {
-  width: $aside-width;
-}
-
-main {
-  width: 100% - $aside-width;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#terminal {
-  width: 100%;
-  flex-grow: 1;
+  & > main {
+    width: 100%;
+  }
 }

@@ -1,3 +1,4 @@
+import functools
 import json
 import logging
 import os
@@ -5,27 +6,153 @@ import pty
 import select
 import signal
 import typing
+import inspect
 
 import click
-from tornado.web import Application, RequestHandler, StaticFileHandler
+from tornado.web import Application, RequestHandler, StaticFileHandler, HTTPError
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
+import sqlalchemy
+from sqlalchemy.ext.asyncio import AsyncSession
 
+import db
 from runner import Runner
-from utils import find_scripts
-
-SCRIPTS_DIR = os.getenv('SC_SCRIPTS_DIR') or os.path.join(os.path.dirname(__file__), 'scripts')
-CONFIG_FILE = os.path.join(SCRIPTS_DIR, '.sc.conf')
+from utils import find_scripts, gen_token
+from settings import SCRIPTS_DIR, CONFIG_FILE_PATH
 
 enable_pretty_logging()
 
 logger = logging.getLogger(__name__)
 
 
-class ScriptListApi(RequestHandler):
+def admin_required(fn):
+    @functools.wraps(fn)
+    async def wrapper(self: BaseHandler, *args, **kwargs):
+        user = await self.current_user
+        if not user or not user.is_admin:
+            raise HTTPError(403)
+        rv = fn(self, *args, **kwargs)
+        if inspect.isawaitable(rv):
+            return await rv
+        return rv
+
+    return wrapper
+
+
+class BaseHandler(RequestHandler):
+    async def get_current_user(self):
+        token = self.get_secure_cookie('sessionid')
+        if token:
+            token = token.decode()
+            async with AsyncSession(db.engine) as session:
+                result = await session.execute(sqlalchemy.select(db.User).where(db.User.token == token))
+                user = result.scalar_one_or_none()
+                return user
+
+    @property
+    async def current_user(self) -> typing.Optional[db.User]:
+        key = '_current_user'
+        if not hasattr(self, key):
+            setattr(self, key, await self.get_current_user())
+        return getattr(self, key)
+
+    def finish_error(self, *, message=None, errors=None, status_code=400):
+        self.set_status(status_code)
+        self.finish({'message': message, 'errors': errors})
+
+
+class FileApi(BaseHandler):
+    @staticmethod
+    def _get_full_path(path):
+        return os.path.join(SCRIPTS_DIR, path)
+
+    @staticmethod
+    def _get_file_type(path):
+        ext = os.path.splitext(path)[1]
+        return {
+            '.py': 'python',
+            '.js': 'javascript'
+        }.get(ext)
+
+    @admin_required
     def get(self):
-        scripts = find_scripts(SCRIPTS_DIR)
+        path = self.get_argument('path')
+        full_path = self._get_full_path(path)
+        try:
+            with open(full_path) as fp:
+                content = fp.read()
+        except FileNotFoundError:
+            content = None
+        self.finish({"path": path, 'content': content, 'filetype': self._get_file_type(path)})
+
+    @admin_required
+    def put(self):
+        path = self.get_argument('path')
+        content = self.get_body_argument('content')
+        full_path = self._get_full_path(path)
+        with open(full_path, 'w') as fp:
+            fp.write(content)
+        self.finish()
+
+
+class UsersApi(BaseHandler):
+    @admin_required
+    async def get(self):
+        async with db.engine.connect() as conn:
+            result = await conn.execute(sqlalchemy.select(db.User))
+            users = [dict(i) for i in result.fetchall()]
+            self.write(dict(users=users))
+
+    @admin_required
+    async def post(self):
+        real_name = self.get_body_argument('real_name')
+        group = self.get_body_argument('group', default=None)
+        async with AsyncSession(db.engine) as session:
+            data = dict(real_name=real_name, token=gen_token(), group=group)
+            await session.execute(sqlalchemy.insert(db.User).values(**data))
+            await session.commit()
+        await self.finish(data)
+
+
+class UserApi(BaseHandler):
+    @admin_required
+    async def delete(self, uid):
+        async with AsyncSession(db.engine) as session:
+            await session.execute(sqlalchemy.delete(db.User).where(db.User.id == uid))
+            await session.commit()
+        await self.finish()
+
+
+class SignApi(BaseHandler):
+    async def post(self):
+        token = self.get_body_argument('token')
+        async with AsyncSession(db.engine) as session:
+            result = await session.execute(sqlalchemy.select(db.User).where(db.User.token == token))
+            user = result.scalar_one_or_none()
+        if user:
+            self.set_secure_cookie('sessionid', user.token)
+        else:
+            self.finish_error(errors={'token': '无效的令牌'})
+
+    def delete(self):
+        self.clear_cookie('sessionid')
+
+
+class MeApi(BaseHandler):
+    async def get(self):
+        user = await self.current_user
+        if user:
+            data = dict(anonymous=False, id=user.id, realName=user.real_name, group=user.group)
+        else:
+            data = dict(anonymous=True)
+        await self.finish(data)
+
+
+class ScriptListApi(BaseHandler):
+    async def get(self):
+        user = await self.current_user
+        scripts = find_scripts(user and user.group)
         self.write({'scripts': scripts})
 
 
@@ -37,7 +164,7 @@ class RunScriptWs(WebSocketHandler):
         script = self.get_argument('script')
         pid, fd = pty.fork()
         if pid == 0:
-            run = Runner(CONFIG_FILE)
+            run = Runner(CONFIG_FILE_PATH)
             run(os.path.join(SCRIPTS_DIR, script))
         else:
             self.log('Run script %r' % script, pid)
@@ -94,11 +221,20 @@ class RunScriptWs(WebSocketHandler):
 
 def make_app(debug=False):
     static_path = os.path.join(os.path.dirname(__file__), 'web/build')
+    settings = {
+        'debug': debug,
+        'cookie_secret': '__secret__'
+    }
     app = Application([
         (r'/api/scripts', ScriptListApi),
+        (r'/api/users', UsersApi),
+        (r'/api/users/(.*)', UserApi),
+        (r'/api/me', MeApi),
+        (r'/api/sign', SignApi),
+        (r'/api/file', FileApi),
         (r'/socket/run', RunScriptWs),
         (r'/(.*)', StaticFileHandler, dict(path=static_path, default_filename='index.html')),
-    ], debug=debug)
+    ], **settings)
     return app
 
 
@@ -118,8 +254,9 @@ def main(debug):
     except socket.gaierror:
         host = 'localhost'
 
-    print('Running on: http://%s:%d' % (host, port))
-    print('Debug:', debug)
+    db.init()
+    logger.info('Running on: http://%s:%d', host, port)
+    logger.info('Debug: %s', debug)
     IOLoop.current().start()
 
 

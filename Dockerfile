@@ -11,6 +11,7 @@ FROM python:3.6
 WORKDIR /code
 
 ENV SC_SCRIPTS_DIR="/scripts"
+ENV SC_DATA_DIR="/data"
 
 COPY . .
 COPY --from=builder /code/build ./web/build
