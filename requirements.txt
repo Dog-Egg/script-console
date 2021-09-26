@@ -4,3 +4,4 @@ gitignore_parser
 mock
 sqlalchemy
 aiosqlite
+PyYAML

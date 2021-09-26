@@ -1,6 +1,6 @@
-import fnmatch
 import os
 import random
+import re
 import string
 
 from gitignore_parser import parse_gitignore
@@ -35,7 +35,7 @@ def ignore_parser(group):
             return result
 
         for p in permission_ignores:
-            if fnmatch.fnmatch(path, p):
+            if re.search(p, path):
                 return True
         return False
 

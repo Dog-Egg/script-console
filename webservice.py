@@ -5,6 +5,7 @@ import os
 import pty
 import select
 import signal
+import traceback
 import typing
 import inspect
 
@@ -72,7 +73,8 @@ class FileApi(BaseHandler):
         ext = os.path.splitext(path)[1]
         return {
             '.py': 'python',
-            '.js': 'javascript'
+            '.js': 'javascript',
+            '.yaml': 'yaml',
         }.get(ext)
 
     @admin_required
@@ -164,8 +166,12 @@ class RunScriptWs(WebSocketHandler):
         script = self.get_argument('script')
         pid, fd = pty.fork()
         if pid == 0:
-            run = Runner(CONFIG_FILE_PATH)
-            run(os.path.join(SCRIPTS_DIR, script))
+            try:
+                run = Runner(CONFIG_FILE_PATH)
+                run(os.path.join(SCRIPTS_DIR, script))
+            finally:
+                traceback.print_exc()
+                exit(1)
         else:
             self.log('Run script %r' % script, pid)
             self.fd = fd
