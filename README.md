@@ -2,6 +2,20 @@
 
 _Web Terminal_
 
-### 截图
+## 安装
 
-![](./screenshot/screenshot1.jpg)
+### docker
+
+```shell
+git clone https://github.com/Dog-Egg/script-console.git
+
+cd script-console
+
+docker build -t script-console .
+
+docker run --rm -v /xxx/scripts:/scripts -v /xxx/data:/data -P -d script-console
+```
+
+## 截图
+
+![](./screenshot/screenshot1.png)
