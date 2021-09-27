@@ -4,7 +4,7 @@ from collections import namedtuple
 
 import yaml
 
-FileConf = namedtuple('FileConf', [
+ScriptConf = namedtuple('ScriptConf', [
     'pattern',
     'program',
     'priority',
@@ -17,13 +17,13 @@ class Conf:
     def __init__(self, file):
         with open(file) as fp:
             self.data = yaml.load(fp, Loader=yaml.CLoader)
-        self._file_configs = None
+        self._script_configs = None
 
-    def _get_file_configs(self):
+    def _get_script_configs(self):
         rv = []
         for item in self.data['scripts']:
             item: dict
-            rv.append(FileConf(
+            rv.append(ScriptConf(
                 pattern=item['pattern'],
                 program=item['program'],
                 priority=item.get('priority', 0),
@@ -33,14 +33,14 @@ class Conf:
         return rv
 
     @property
-    def file_configs(self):
-        if self._file_configs is None:
-            self._file_configs = self._get_file_configs()
-        return self._file_configs
+    def script_configs(self):
+        if self._script_configs is None:
+            self._script_configs = self._get_script_configs()
+        return self._script_configs
 
-    def get_file_config(self, path):
-        rv: typing.Optional[FileConf] = None
-        for c in self.file_configs:
+    def get_script_config(self, path):
+        rv: typing.Optional[ScriptConf] = None
+        for c in self.script_configs:
             if re.search(c.pattern, path):
                 if rv is None or c.priority > rv.priority:
                     rv = c

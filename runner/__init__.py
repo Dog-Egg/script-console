@@ -11,7 +11,7 @@ class Runner:
         self.conf = Conf(conf_file)
 
     def __call__(self, path):
-        conf = self.conf.get_file_config(path)
+        conf = self.conf.get_script_config(path)
         if not conf:
             raise RuntimeError('Not found executable program')
 

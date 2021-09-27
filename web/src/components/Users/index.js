@@ -22,7 +22,9 @@ export default function Users() {
 
   function getTableData() {
     getUsers().then((resp) => {
-      setUsers(resp.data["users"]);
+      const users = resp.data["users"];
+      setUsers(users);
+      setGroupOptions(users.map((i) => i.group).filter((i) => !!i));
     });
   }
 
@@ -31,6 +33,7 @@ export default function Users() {
   const [form] = Form.useForm();
   const [formModalVisible, setFormModalVisible] = React.useState(false);
   const [formModalLoading, setFormModalLoading] = React.useState(false);
+  const [groupOptions, setGroupOptions] = React.useState([]);
 
   return (
     <div className="users">
@@ -122,7 +125,7 @@ export default function Users() {
             <Input />
           </Form.Item>
           <Form.Item label="组" name="group">
-            <AutoComplete options={[{ value: "admin" }]} />
+            <AutoComplete options={groupOptions.map((i) => ({ value: i }))} />
           </Form.Item>
         </Form>
       </Modal>

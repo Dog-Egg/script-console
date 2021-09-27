@@ -109,7 +109,7 @@ class UsersApi(BaseHandler):
     @admin_required
     async def post(self):
         real_name = self.get_body_argument('real_name')
-        group = self.get_body_argument('group', default=None)
+        group = self.get_body_argument('group', default=None) or None
         async with AsyncSession(db.engine) as session:
             data = dict(real_name=real_name, token=gen_token(), group=group)
             await session.execute(sqlalchemy.insert(db.User).values(**data))

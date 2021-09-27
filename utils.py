@@ -16,7 +16,7 @@ def ignore_parser(group):
 
         rv = []
         conf = Conf(settings.CONFIG_FILE_PATH)
-        for c in conf.file_configs:
+        for c in conf.script_configs:
             if c.groups and group not in c.groups:
                 rv.append(c.pattern)
         return rv
