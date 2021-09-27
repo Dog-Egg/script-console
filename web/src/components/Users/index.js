@@ -13,6 +13,7 @@ import React from "react";
 import "./style.scss";
 import { PlusOutlined } from "@ant-design/icons";
 import { UserContext } from "../../ctx";
+import uniq from "lodash/uniq";
 
 export default function Users() {
   const [users, setUsers] = React.useState([]);
@@ -24,7 +25,8 @@ export default function Users() {
     getUsers().then((resp) => {
       const users = resp.data["users"];
       setUsers(users);
-      setGroupOptions(users.map((i) => i.group).filter((i) => !!i));
+      const groups = users.map((i) => i.group).filter((i) => !!i);
+      setGroupOptions(uniq(groups));
     });
   }
 
