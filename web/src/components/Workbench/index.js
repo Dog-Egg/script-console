@@ -1,18 +1,12 @@
 import "./style.scss";
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { Terminal } from "xterm";
 import "xterm/css/xterm.css";
 import { FitAddon } from "xterm-addon-fit";
 import { SearchAddon } from "xterm-addon-search";
 import { WebLinksAddon } from "xterm-addon-web-links";
-import { Menu, Input, Modal } from "antd";
-import {
-  DownOutlined,
-  EditOutlined,
-  SearchOutlined,
-  UpOutlined,
-} from "@ant-design/icons";
+import { Input } from "antd";
+import { DownOutlined, SearchOutlined, UpOutlined } from "@ant-design/icons";
 import Icon from "@ant-design/icons";
 import { ReactComponent as StopSvg } from "../../icons/suspend.svg";
 import { ReactComponent as RunSvg } from "../../icons/execute.svg";
@@ -22,28 +16,15 @@ import classNames from "classnames";
 
 import figlet from "figlet";
 import standard from "figlet/importable-fonts/Standard.js";
-import { getFile, updateFile } from "../../api";
-import { UserContext } from "../../ctx";
+import Directory from "../Directory";
 
 figlet.parseFont("Standard", standard);
-
-const CodeMirror = React.lazy(() => import("../CodeMirror"));
 
 let term;
 let socket;
 let searchAddon;
 
 export default function Workbench() {
-  const currentUser = React.useContext(UserContext);
-
-  // script
-  const [scripts, setScripts] = useState([]);
-  useEffect(() => {
-    axios.get("/api/scripts").then((resp) => {
-      setScripts(resp.data.scripts);
-    });
-  }, []);
-
   // xterm
   useEffect(() => {
     term = new Terminal({
@@ -116,50 +97,6 @@ export default function Workbench() {
     });
   }
 
-  function renderMenu() {
-    function inner(items) {
-      return items.map((item) => {
-        if (item.children) {
-          return (
-            <Menu.SubMenu key={item.path} title={item.name}>
-              {inner(item.children)}
-            </Menu.SubMenu>
-          );
-        } else {
-          return (
-            <Menu.Item key={item.path} disabled={item.sys}>
-              <span>{item.name}</span>
-              {currentUser.isAdmin && (
-                <EditOutlined
-                  className="editable"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    getFile(item.path).then((resp) => {
-                      setCodeFileInfo(resp.data);
-                      setCodeMirrorVisible(true);
-                    });
-                  }}
-                />
-              )}
-            </Menu.Item>
-          );
-        }
-      });
-    }
-
-    return (
-      <Menu
-        mode="inline"
-        onClick={({ key }) => {
-          setCurrentScript(key);
-          runScript(key);
-        }}
-      >
-        {inner(scripts)}
-      </Menu>
-    );
-  }
-
   // 搜索
   const [search, setSearch] = useState("");
   useEffect(() => {
@@ -180,15 +117,16 @@ export default function Workbench() {
   const isRunnable = isStopped && currentScript;
   const isRunning = state === STATES.RUNNING;
 
-  // code mirror
-  const [codeMirror, setCodeMirror] = useState();
-  const [codeMirrorVisible, setCodeMirrorVisible] = useState(false);
-  const [codeFileInfo, setCodeFileInfo] = useState({});
-  const [codeChanged, setCodeChanged] = useState(false);
-
   return (
     <div className="workbench">
-      <aside>{renderMenu()}</aside>
+      <aside>
+        <Directory
+          onClickScript={(path) => {
+            setCurrentScript(path);
+            runScript(path);
+          }}
+        />
+      </aside>
       <main>
         <div className="toolbar">
           <div className="operations">
@@ -276,47 +214,6 @@ export default function Workbench() {
         </div>
         <div id="terminal" />
       </main>
-
-      <Modal
-        title={codeFileInfo.path}
-        visible={codeMirrorVisible}
-        width={1000}
-        style={{ top: "10vh" }}
-        destroyOnClose
-        maskClosable={false}
-        onCancel={() => {
-          setCodeMirrorVisible(false);
-        }}
-        afterClose={() => {
-          setCodeChanged(false);
-          setCodeMirror();
-        }}
-        okButtonProps={{ disabled: !codeChanged }}
-        okText="保存"
-        onOk={() => {
-          const content = codeMirror.getValue();
-          updateFile(codeFileInfo.path, content).then(() => {
-            setCodeMirrorVisible(false);
-          });
-        }}
-      >
-        <CodeMirror
-          editorDidMount={(editor) => {
-            setTimeout(() => {
-              editor.refresh();
-            }, 200);
-            setCodeMirror(editor);
-          }}
-          value={codeFileInfo.content}
-          options={{
-            lineNumbers: true,
-            mode: codeFileInfo["filetype"],
-          }}
-          onChange={function (_, __, value) {
-            setCodeChanged(value !== codeFileInfo.content);
-          }}
-        />
-      </Modal>
     </div>
   );
 }

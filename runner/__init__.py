@@ -8,7 +8,10 @@ COLOR_RESET = '\x1B[0m'
 
 class Runner:
     def __init__(self, conf_file):
-        self.conf = Conf(conf_file)
+        conf = Conf(conf_file)
+        if conf.error:
+            raise conf.error
+        self.conf = conf
 
     def __call__(self, path):
         conf = self.conf.get_script_config(path)

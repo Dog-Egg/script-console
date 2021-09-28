@@ -24,6 +24,12 @@ request.interceptors.response.use(
   }
 );
 
+export function getDirectory() {
+  return request({
+    url: "/directory",
+  });
+}
+
 export function signIn(token) {
   const formData = new FormData();
   formData.append("token", token);
@@ -76,18 +82,42 @@ export function delUser(uid) {
 
 export function getFile(path) {
   return request({
-    url: `/file`,
+    url: `/fs`,
     params: { path },
   });
 }
 
-export function updateFile(path, content) {
+export function updateFile(path, { content, name }) {
   const formData = new FormData();
-  formData.append("content", content);
+  if (content) formData.append("content", content);
+  if (name) formData.append("name", name);
   return request({
-    url: `/file`,
+    url: `/fs`,
     method: "PUT",
     params: { path },
+    data: formData,
+  });
+}
+
+export function makeFile(path, isDir = false) {
+  const formData = new FormData();
+  formData.append("path", path);
+  if (isDir) {
+    formData.append("t", "d");
+  }
+  return request({
+    url: "/fs",
+    method: "POST",
+    data: formData,
+  });
+}
+
+export function removeFile(path) {
+  const formData = new FormData();
+  formData.append("path", path);
+  return request({
+    url: "/fs",
+    method: "DELETE",
     data: formData,
   });
 }

@@ -10,21 +10,6 @@ $disabled-color: #d9d9d9;
 
   aside {
     width: $aside-width;
-    .ant-menu-item {
-      position: relative;
-      .editable {
-        display: none;
-        padding: 6px;
-        position: absolute;
-        right: 10px;
-        top: 8px;
-      }
-      &:hover {
-        .editable {
-          display: inline-block;
-        }
-      }
-    }
   }
 
   main {

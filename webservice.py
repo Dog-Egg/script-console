@@ -19,8 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import db
 from runner import Runner
-from utils import find_scripts, gen_token
-from settings import SCRIPTS_DIR, CONFIG_FILE_PATH
+from utils import gen_token
+import fs
+from settings import CONFIG_FILE_PATH
 
 enable_pretty_logging()
 
@@ -63,11 +64,7 @@ class BaseHandler(RequestHandler):
         self.finish({'message': message, 'errors': errors})
 
 
-class FileApi(BaseHandler):
-    @staticmethod
-    def _get_full_path(path):
-        return os.path.join(SCRIPTS_DIR, path)
-
+class FsApi(BaseHandler):
     @staticmethod
     def _get_file_type(path):
         ext = os.path.splitext(path)[1]
@@ -80,7 +77,7 @@ class FileApi(BaseHandler):
     @admin_required
     def get(self):
         path = self.get_argument('path')
-        full_path = self._get_full_path(path)
+        full_path = fs.join(path)
         try:
             with open(full_path) as fp:
                 content = fp.read()
@@ -89,12 +86,43 @@ class FileApi(BaseHandler):
         self.finish({"path": path, 'content': content, 'filetype': self._get_file_type(path)})
 
     @admin_required
+    def post(self):
+        path = self.get_argument('path')
+        t = self.get_argument('t', default=None)
+        if t == 'd':
+            try:
+                fs.make_dir(path)
+            except FileExistsError:
+                return self.finish_error(message='文件或目录已存在')
+        else:
+            try:
+                fs.make_file(path)
+            except FileExistsError:
+                return self.finish_error(message='文件或目录已存在')
+        self.finish()
+
+    @admin_required
     def put(self):
         path = self.get_argument('path')
-        content = self.get_body_argument('content')
-        full_path = self._get_full_path(path)
-        with open(full_path, 'w') as fp:
-            fp.write(content)
+        content = self.get_body_argument('content', default=None)
+        name = self.get_body_argument('name', default=None)
+        if content:
+            full_path = fs.join(path)
+            with open(full_path, 'w') as fp:
+                fp.write(content)
+        if name:
+            try:
+                fs.rename(path, name)
+            except FileExistsError:
+                return self.finish_error(message='文件或目录已存在')
+            except FileNotFoundError:
+                return self.finish_error(message='文件或目录不存在')
+        self.finish()
+
+    @admin_required
+    def delete(self):
+        path = self.get_argument('path')
+        fs.remove(path)
         self.finish()
 
 
@@ -151,11 +179,11 @@ class MeApi(BaseHandler):
         await self.finish(data)
 
 
-class ScriptListApi(BaseHandler):
+class DirectoryApi(BaseHandler):
     async def get(self):
         user = await self.current_user
-        scripts = find_scripts(user and user.group)
-        self.write({'scripts': scripts})
+        directory = fs.get_directory(user and user.group)
+        self.write({'directory': directory})
 
 
 class RunScriptWs(WebSocketHandler):
@@ -168,7 +196,7 @@ class RunScriptWs(WebSocketHandler):
         if pid == 0:
             try:
                 run = Runner(CONFIG_FILE_PATH)
-                run(os.path.join(SCRIPTS_DIR, script))
+                run(fs.join(script))
             finally:
                 traceback.print_exc()
                 exit(1)
@@ -232,12 +260,12 @@ def make_app(debug=False):
         'cookie_secret': '__secret__'
     }
     app = Application([
-        (r'/api/scripts', ScriptListApi),
+        (r'/api/directory', DirectoryApi),
         (r'/api/users', UsersApi),
         (r'/api/users/(.*)', UserApi),
         (r'/api/me', MeApi),
         (r'/api/sign', SignApi),
-        (r'/api/file', FileApi),
+        (r'/api/fs', FsApi),
         (r'/socket/run', RunScriptWs),
         (r'/(.*)', StaticFileHandler, dict(path=static_path, default_filename='index.html')),
     ], **settings)

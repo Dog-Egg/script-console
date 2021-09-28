@@ -1,4 +1,3 @@
-import os
 import random
 import re
 import string
@@ -40,38 +39,6 @@ def ignore_parser(group):
         return False
 
     return wrapper
-
-
-def find_scripts(group):
-    ignore = ignore_parser(group)
-    root = settings.SCRIPTS_DIR
-
-    def _find_scripts(dir_path) -> list:
-        res = []
-        for entry in os.scandir(dir_path):
-            entry: os.DirEntry
-            node = {'name': entry.name, 'path': os.path.relpath(entry.path, root)}
-            if entry.name.startswith('.') or ignore(entry.path):
-                continue
-
-            if entry.is_dir():
-                children = _find_scripts(entry.path)
-                if not children:
-                    continue
-                node.update(children=children)
-
-            res.append(node)
-
-        res = sorted(res, key=lambda x: 'children' not in x)
-        return res
-
-    rv = _find_scripts(root)
-
-    if group == settings.ADMINISTRATOR:
-        especial = [settings.IGNORE_FILENAME, settings.CONFIG_FILENAME]
-        for i in especial:
-            rv.append(dict(name=i, path=i, sys=True))
-    return rv
 
 
 def gen_token():
