@@ -6,3 +6,4 @@ sqlalchemy
 aiosqlite
 PyYAML
 marshmallow
+aiofiles

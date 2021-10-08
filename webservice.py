@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import db
 from runner import Runner
-from utils import gen_token
+from utils import gen_token, asynctools
 import fs
 from settings import CONFIG_FILE_PATH
 
@@ -61,7 +61,7 @@ class BaseHandler(RequestHandler):
 
     def finish_error(self, *, message=None, errors=None, status_code=400):
         self.set_status(status_code)
-        self.finish({'message': message, 'errors': errors})
+        return self.finish({'message': message, 'errors': errors})
 
 
 class FsApi(BaseHandler):
@@ -83,6 +83,8 @@ class FsApi(BaseHandler):
                 content = fp.read()
         except FileNotFoundError:
             content = None
+        except UnicodeDecodeError as exc:
+            return self.finish_error(message='%s 解码失败' % exc.encoding)
         self.finish({"path": path, 'content': content, 'filetype': self._get_file_type(path)})
 
     @admin_required
@@ -126,6 +128,46 @@ class FsApi(BaseHandler):
         self.finish()
 
 
+class UploadApi(BaseHandler):
+    @admin_required
+    async def post(self):
+        file = self.request.files['file'][0]
+        dir_path = self.get_argument('dir')
+        file_path = os.path.join(fs.join(dir_path), file['filename'])
+
+        i = 0
+        temp_file_path = file_path
+        while True:
+            if not await asynctools.exists(temp_file_path):
+                file_path = temp_file_path
+                break
+            i += 1
+            root, ext = os.path.splitext(file_path)
+            temp_file_path = root + ('(%d)' % i) + ext
+
+        async with asynctools.open(file_path, 'wb') as fp:
+            await fp.write(file['body'])
+        await self.finish()
+
+
+class DownloadApi(BaseHandler):
+    @admin_required
+    async def get(self):
+        path = self.get_argument('path')
+        full_path = fs.join(path)
+        try:
+            async with asynctools.open(full_path, 'rb') as fp:
+                while True:
+                    data = await fp.read(1024 * 4)
+                    if not data:
+                        break
+                    self.write(data)
+                    await self.flush()
+        except FileNotFoundError:
+            raise HTTPError(404)
+        await self.finish()
+
+
 class UsersApi(BaseHandler):
     @admin_required
     async def get(self):
@@ -163,7 +205,7 @@ class SignApi(BaseHandler):
         if user:
             self.set_secure_cookie('sessionid', user.token)
         else:
-            self.finish_error(errors={'token': '无效的令牌'})
+            await self.finish_error(errors={'token': '无效的令牌'})
 
     def delete(self):
         self.clear_cookie('sessionid')
@@ -266,6 +308,8 @@ def make_app(debug=False):
         (r'/api/me', MeApi),
         (r'/api/sign', SignApi),
         (r'/api/fs', FsApi),
+        (r'/api/upload', UploadApi),
+        (r'/api/download', DownloadApi),
         (r'/socket/run', RunScriptWs),
         (r'/(.*)', StaticFileHandler, dict(path=static_path, default_filename='index.html')),
     ], **settings)

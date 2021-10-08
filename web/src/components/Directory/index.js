@@ -1,14 +1,17 @@
 import { Tree, message, Dropdown, Menu, Modal } from "antd";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
+  downloadFile,
   getDirectory,
   getFile,
   makeFile,
   removeFile,
   updateFile,
+  uploadFile,
 } from "../../api";
 import {
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   FileAddOutlined,
   FileOutlined,
@@ -17,6 +20,7 @@ import {
   FolderAddOutlined,
   FolderOpenOutlined,
   FolderOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import prompt from "../Prompt";
 import * as nodePath from "path";
@@ -33,9 +37,12 @@ export default function Directory({ onClickScript }) {
 
   function updateDirectory() {
     getDirectory().then((resp) => {
+      setSelectedKeys();
+      setSelectedNode();
       setTreeData(resp.data.directory);
     });
   }
+
   useEffect(() => {
     updateDirectory();
   }, []);
@@ -96,6 +103,8 @@ export default function Directory({ onClickScript }) {
       REMOVE: "3",
       EDIT_FILE: "4",
       RENAME: "5",
+      UPLOAD: "6",
+      DOWNLOAD: "7",
     };
 
     return (
@@ -136,6 +145,12 @@ export default function Directory({ onClickScript }) {
                 setEditorVisible(true);
               });
               break;
+            case operations.UPLOAD:
+              uploadRef.current.click();
+              break;
+            case operations.DOWNLOAD:
+              downloadFile(selectedNode["key"]);
+              break;
             default:
           }
         }}
@@ -153,6 +168,17 @@ export default function Directory({ onClickScript }) {
         </Menu.Item>
         <Menu.Item key={operations.MAKE_DIR} icon={<FolderAddOutlined />}>
           创建目录
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item key={operations.UPLOAD} icon={<UploadOutlined />}>
+          上传文件
+        </Menu.Item>
+        <Menu.Item
+          key={operations.DOWNLOAD}
+          icon={<DownloadOutlined />}
+          disabled={!(selectedNode && selectedNode["isLeaf"])}
+        >
+          下载文件
         </Menu.Item>
         {selectedNode && (
           <>
@@ -184,6 +210,14 @@ export default function Directory({ onClickScript }) {
 
   const [editorVisible, setEditorVisible] = useState(false);
 
+  const uploadRef = useRef();
+
+  function handleUpload(event) {
+    const file = event.target.files[0];
+    event.target.value = "";
+    uploadFile(file, pathJoin("/")).then(updateDirectory);
+  }
+
   if (currentUser.isAdmin) {
     return (
       <>
@@ -202,6 +236,7 @@ export default function Directory({ onClickScript }) {
             });
           }}
         />
+        <input ref={uploadRef} type="file" onChange={handleUpload} />
       </>
     );
   }
