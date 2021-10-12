@@ -130,7 +130,10 @@ export default function Directory({ onClickScript }) {
               });
               break;
             case operations.RENAME:
-              prompt({ title: "重命名" }).then((value) => {
+              prompt({
+                title: "重命名",
+                defaultValue: selectedNode["title"],
+              }).then((value) => {
                 updateFile(selectedNode["key"], {
                   name: nodePath.join(
                     nodePath.dirname(selectedNode["key"]),

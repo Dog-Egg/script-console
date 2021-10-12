@@ -20,7 +20,8 @@ export default function prompt(options) {
 function Prompt(props) {
   const [visible, setVisible] = useState(true);
   const [value, setValue] = useState("");
-  const isOk = !!value.trim();
+
+  const isOk = !!value.trim() && value !== props.defaultValue;
 
   function handleOk() {
     if (!isOk) return;
@@ -48,6 +49,7 @@ function Prompt(props) {
         onChange={(e) => {
           setValue(e.target.value);
         }}
+        defaultValue={props.defaultValue}
       />
     </Modal>
   );
