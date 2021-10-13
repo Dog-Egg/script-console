@@ -239,7 +239,12 @@ export default function Directory({ onClickScript }) {
             });
           }}
         />
-        <input ref={uploadRef} type="file" onChange={handleUpload} />
+        <input
+          style={{ display: "none" }}
+          ref={uploadRef}
+          type="file"
+          onChange={handleUpload}
+        />
       </>
     );
   }
