@@ -37,7 +37,7 @@ export default function Directory({ onClickScript }) {
 
   function updateDirectory() {
     getDirectory().then((resp) => {
-      setSelectedKeys();
+      if (selectedKeys.length) setSelectedKeys([]);
       setSelectedNode();
       setTreeData(resp.data.directory);
     });
@@ -47,8 +47,22 @@ export default function Directory({ onClickScript }) {
     updateDirectory();
   }, []);
 
-  const directoryTree = (
+  // anchor
+  useEffect(() => {
+    const anchor = window.location.hash.substring(1);
+    if (anchor) {
+      setSelectedKeys([decodeURI(anchor)]);
+    }
+  }, []);
+  useEffect(() => {
+    if (selectedKeys.length) {
+      window.location.hash = selectedKeys[0];
+    }
+  }, [selectedKeys]);
+
+  const directoryTree = treeData && (
     <DirectoryTree
+      defaultExpandedKeys={[selectedKeys]}
       icon={function (node) {
         if (node.isLeaf) {
           if (node["isSys"]) {
@@ -248,5 +262,5 @@ export default function Directory({ onClickScript }) {
       </>
     );
   }
-  return directoryTree;
+  return <>{directoryTree}</>;
 }
