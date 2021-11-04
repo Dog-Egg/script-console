@@ -13,15 +13,14 @@ class TestRunner(unittest.TestCase):
         def _open(filename, *args, **kwargs):
             if filename == 'foo':
                 return mock.mock_open(read_data="""
-                scripts:
-                    -   pattern: .*\.py
-                        program: python
-
+                commands:
                     -   pattern: 123\.py
                         program: python3.2
-                        priority: 1
                         environment:
                             PYTHONPATH: /site-packages3.2
+
+                    -   pattern: .*\.py
+                        program: python
                 """)()
             return open(filename, *args, **kwargs)
 

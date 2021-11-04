@@ -21,23 +21,15 @@ docker run --rm -v /xxx/scripts:/scripts -v /xxx/data:/data -P -d script-console
 脚本配置文件
 
 ```yaml
-scripts:
+commands:
   - pattern: \.py$    # [必填] 正则表达式，匹配 .py 结尾的文件
     program: python   # [必填] 使用 python 来执行文件
-    priority: -1      # 优先级，一个文件可能会匹配多个配置，程序会使用优先级最高的配置，默认为 0
     environment: # 环境变量
       PYTHONPATH: /xxx/site-packages
-    groups: # 用户组访问权限，不写均可访问
+access:
+  - pattern: adminGroup   # [必填] 正则表达式
+    groups: # 用户组访问权限
       - admin
-```
-
-## .scignore
-
-忽略的文件和目录不会在前端展示
-
-```
-site-packages/
-README.md
 ```
 
 ## 用户系统

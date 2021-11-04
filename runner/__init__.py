@@ -14,13 +14,13 @@ class Runner:
         self.conf = conf
 
     def __call__(self, path):
-        conf = self.conf.get_script_config(path)
-        if not conf:
+        command = self.conf.get_command(path)
+        if not command:
             raise RuntimeError('Not found executable program')
 
-        program = conf.program
+        program = command['program']
         name = os.path.basename(program)
         env = os.environ.copy()
-        env.update(conf.environment)
+        env.update(command['environment'])
         print(COLOR_YELLOW + ('Command "%s"' % ' '.join([program, path])) + COLOR_RESET, os.linesep)
         os.execlpe(program, name, path, env)

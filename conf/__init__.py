@@ -1,37 +1,26 @@
 import re
 import typing
-from collections import namedtuple
 
 import yaml
 import marshmallow as ma
 
 import settings
 
-ScriptConf = namedtuple('ScriptConf', [
-    'pattern',
-    'program',
-    'priority',
-    'environment',
-    'groups'
-])
 
-
-class _DataScriptItemSchema(ma.Schema):
+class _CommandsSchema(ma.Schema):
     pattern = ma.fields.String(required=True)
     program = ma.fields.String(required=True)
-    priority = ma.fields.Integer(missing=0)
     environment = ma.fields.Dict(missing={})
+
+
+class _AccessSchema(ma.Schema):
+    pattern = ma.fields.String(required=True)
     groups = ma.fields.List(ma.fields.String(), missing=[])
 
-    class Meta:
-        unknown = ma.EXCLUDE
 
-
-class _DataSchema(ma.Schema):
-    scripts = ma.fields.List(ma.fields.Nested(_DataScriptItemSchema), required=True)
-
-    class Meta:
-        unknown = ma.EXCLUDE
+class _Schema(ma.Schema):
+    commands = ma.fields.List(ma.fields.Nested(_CommandsSchema), missing=[])
+    access = ma.fields.List(ma.fields.Nested(_AccessSchema), missing=[])
 
 
 class ConfError(Exception):
@@ -46,33 +35,23 @@ class Conf:
         try:
             with open(file) as fp:
                 data = yaml.load(fp, Loader=yaml.CLoader)
-            self.data = _DataSchema().load(data)
+            self.data = _Schema().load(data)
         except Exception as e:
-            self.data = {'scripts': []}
+            self.data = _Schema().load({})
             try:
                 raise ConfError from e
             except ConfError as e2:
                 self.error = e2
 
-        self._script_configs = None
-
-    def _get_script_configs(self):
-        rv = []
-        for item in self.data['scripts']:
-            item: dict
-            rv.append(ScriptConf(**item))
-        return rv
+    @property
+    def commands(self) -> typing.List[typing.Dict]:
+        return self.data['commands']
 
     @property
-    def script_configs(self):
-        if self._script_configs is None:
-            self._script_configs = self._get_script_configs()
-        return self._script_configs
+    def access(self) -> typing.List[typing.Dict]:
+        return self.data['access']
 
-    def get_script_config(self, path):
-        rv: typing.Optional[ScriptConf] = None
-        for c in self.script_configs:
-            if re.search(c.pattern, path):
-                if rv is None or c.priority > rv.priority:
-                    rv = c
-        return rv
+    def get_command(self, path):
+        for c in self.commands:
+            if re.search(c['pattern'], path):
+                return c

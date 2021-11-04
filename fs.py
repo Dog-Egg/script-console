@@ -77,7 +77,7 @@ def get_directory(group):
     rv = _get_directory(ROOT)
 
     if group == settings.ADMINISTRATOR:
-        especial = [settings.IGNORE_FILENAME, settings.CONFIG_FILENAME]
+        especial = [settings.CONFIG_FILENAME]
         for i in especial:
             rv.append(dict(title=i, key=i, isLeaf=True, isSys=True))
     return rv
