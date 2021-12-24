@@ -43,7 +43,11 @@ export default function CodeEditor(props) {
           value={props.content}
           options={{
             lineNumbers: true,
-            mode: props.mode,
+            mode: {
+              py: "python",
+              js: "javascript",
+              yaml: "yaml",
+            }[(props.title || "").split(".").pop()],
           }}
           onChange={function (_, __, value) {
             setCodeChanged(value !== props.content);

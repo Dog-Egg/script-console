@@ -1,15 +1,18 @@
-import { Tree, message, Dropdown, Menu, Modal } from "antd";
+import { Tree, Dropdown, Menu, Modal } from "antd";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   downloadFile,
-  getDirectory,
-  getFile,
+  getDirectoryTree,
+  readFile,
+  makeDir,
   makeFile,
   removeFile,
-  updateFile,
+  renameFile,
+  writeFile,
   uploadFile,
 } from "../../api";
 import {
+  CaretRightOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
@@ -29,17 +32,16 @@ import CodeEditor from "../CodeEditor";
 
 const { DirectoryTree } = Tree;
 
-export default function Directory({ onClickScript }) {
+export default function Directory({ onRunScript }) {
   const currentUser = useContext(UserContext);
   const [treeData, setTreeData] = useState();
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [selectedNode, setSelectedNode] = useState();
 
   function updateDirectory() {
-    getDirectory().then((resp) => {
-      if (selectedKeys.length) setSelectedKeys([]);
+    getDirectoryTree().then((resp) => {
       setSelectedNode();
-      setTreeData(resp.data.directory);
+      setTreeData(resp.data.data);
     });
   }
 
@@ -79,13 +81,6 @@ export default function Directory({ onClickScript }) {
       selectedKeys={selectedKeys}
       treeData={treeData}
       onSelect={function (keys, { node }) {
-        if (node["isSys"]) {
-          message.warning("系统文件，不可执行").then();
-        } else {
-          if (onClickScript && node.isLeaf) {
-            onClickScript(keys[0]);
-          }
-        }
         setSelectedKeys(keys);
         setSelectedNode(node);
       }}
@@ -119,7 +114,12 @@ export default function Directory({ onClickScript }) {
       RENAME: "5",
       UPLOAD: "6",
       DOWNLOAD: "7",
+      RUN: "8",
     };
+
+    const userIsAdmin = currentUser.isAdmin;
+    const nodeIsFile = selectedNode && selectedNode["isLeaf"];
+    const fileIsSys = selectedNode && selectedNode["isSys"];
 
     return (
       <Menu
@@ -132,7 +132,7 @@ export default function Directory({ onClickScript }) {
               break;
             case operations.MAKE_DIR:
               prompt({ title: "创建目录" }).then((value) => {
-                makeFile(pathJoin(value), true).then(updateDirectory);
+                makeDir(pathJoin(value)).then(updateDirectory);
               });
               break;
             case operations.REMOVE:
@@ -148,19 +148,20 @@ export default function Directory({ onClickScript }) {
                 title: "重命名",
                 defaultValue: selectedNode["title"],
               }).then((value) => {
-                updateFile(selectedNode["key"], {
-                  name: nodePath.join(
-                    nodePath.dirname(selectedNode["key"]),
-                    value
-                  ),
-                }).then(updateDirectory);
+                renameFile(
+                  selectedNode["key"],
+                  nodePath.join(nodePath.dirname(selectedNode["key"]), value)
+                ).then(updateDirectory);
               });
               break;
             case operations.EDIT_FILE:
-              getFile(selectedNode["key"]).then((resp) => {
+              readFile(selectedNode["key"]).then((resp) => {
                 setEditingFile(resp.data);
                 setEditorVisible(true);
               });
+              break;
+            case operations.RUN:
+              onRunScript && onRunScript(selectedNode["key"]);
               break;
             case operations.UPLOAD:
               uploadRef.current.click();
@@ -172,38 +173,63 @@ export default function Directory({ onClickScript }) {
           }
         }}
       >
-        {selectedNode && selectedNode["isLeaf"] && (
+        {nodeIsFile && (
           <>
-            <Menu.Item key={operations.EDIT_FILE} icon={<EditOutlined />}>
-              编辑文件
+            <Menu.Item
+              key={operations.RUN}
+              icon={<CaretRightOutlined />}
+              disabled={fileIsSys}
+            >
+              运行
+            </Menu.Item>
+            <Menu.Item
+              key={operations.EDIT_FILE}
+              icon={<EditOutlined />}
+              disabled={!userIsAdmin}
+            >
+              编辑
             </Menu.Item>
             <Menu.Divider />
           </>
         )}
-        <Menu.Item key={operations.MAKE_FILE} icon={<FileAddOutlined />}>
+        <Menu.Item
+          key={operations.MAKE_FILE}
+          icon={<FileAddOutlined />}
+          disabled={!userIsAdmin}
+        >
           创建文件
         </Menu.Item>
-        <Menu.Item key={operations.MAKE_DIR} icon={<FolderAddOutlined />}>
+        <Menu.Item
+          key={operations.MAKE_DIR}
+          icon={<FolderAddOutlined />}
+          disabled={!userIsAdmin}
+        >
           创建目录
         </Menu.Item>
         <Menu.Divider />
-        <Menu.Item key={operations.UPLOAD} icon={<UploadOutlined />}>
+        <Menu.Item
+          key={operations.UPLOAD}
+          icon={<UploadOutlined />}
+          disabled={!userIsAdmin}
+        >
           上传文件
         </Menu.Item>
-        <Menu.Item
-          key={operations.DOWNLOAD}
-          icon={<DownloadOutlined />}
-          disabled={!(selectedNode && selectedNode["isLeaf"])}
-        >
-          下载文件
-        </Menu.Item>
+        {nodeIsFile && (
+          <Menu.Item
+            key={operations.DOWNLOAD}
+            icon={<DownloadOutlined />}
+            disabled={!userIsAdmin}
+          >
+            下载文件
+          </Menu.Item>
+        )}
         {selectedNode && (
           <>
             <Menu.Divider />
             <Menu.Item
               key={operations.RENAME}
               icon={<FileSyncOutlined />}
-              disabled={selectedNode["isSys"]}
+              disabled={fileIsSys || !userIsAdmin}
             >
               重命名
             </Menu.Item>
@@ -215,7 +241,7 @@ export default function Directory({ onClickScript }) {
             <Menu.Item
               key={operations.REMOVE}
               icon={<DeleteOutlined />}
-              disabled={selectedNode["isSys"]}
+              disabled={fileIsSys || !userIsAdmin}
             >
               删除
             </Menu.Item>
@@ -235,32 +261,28 @@ export default function Directory({ onClickScript }) {
     uploadFile(file, pathJoin("/")).then(updateDirectory);
   }
 
-  if (currentUser.isAdmin) {
-    return (
-      <>
-        <Dropdown overlay={getDropdownMenu} trigger={["contextMenu"]}>
-          <div style={{ height: "100%" }}>{directoryTree}</div>
-        </Dropdown>
-        <CodeEditor
-          visible={editorVisible}
-          title={editingFile["path"]}
-          content={editingFile.content}
-          mode={editingFile["filetype"]}
-          onCancel={() => setEditorVisible(false)}
-          onOk={(content) => {
-            updateFile(editingFile.path, { content }).then(() => {
-              setEditorVisible(false);
-            });
-          }}
-        />
-        <input
-          style={{ display: "none" }}
-          ref={uploadRef}
-          type="file"
-          onChange={handleUpload}
-        />
-      </>
-    );
-  }
-  return <>{directoryTree}</>;
+  return (
+    <>
+      <Dropdown overlay={getDropdownMenu} trigger={["contextMenu"]}>
+        <div style={{ height: "100%" }}>{directoryTree}</div>
+      </Dropdown>
+      <CodeEditor
+        visible={editorVisible}
+        title={editingFile["path"]}
+        content={editingFile.content}
+        onCancel={() => setEditorVisible(false)}
+        onOk={(content) => {
+          writeFile(editingFile.path, content).then(() => {
+            setEditorVisible(false);
+          });
+        }}
+      />
+      <input
+        style={{ display: "none" }}
+        ref={uploadRef}
+        type="file"
+        onChange={handleUpload}
+      />
+    </>
+  );
 }

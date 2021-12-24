@@ -50,6 +50,7 @@ function Prompt(props) {
           setValue(e.target.value);
         }}
         defaultValue={props.defaultValue}
+        autoFocus
       />
     </Modal>
   );

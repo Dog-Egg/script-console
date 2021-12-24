@@ -54,7 +54,9 @@ export default function Workbench() {
 
     figlet("Script Console", function (err, data) {
       term.writeln(data);
-      term.writeln(`\x1b[1;3;33m${"\n 请点击侧边栏执行脚本"}\x1B[0m`);
+      term.writeln(
+        `\x1b[1;3;33m${'\n 请"右键"点击侧边栏文件，然后"运行"脚本'}\x1B[0m`
+      );
     });
 
     function onResize() {
@@ -77,7 +79,7 @@ export default function Workbench() {
     term.clear();
 
     socket = new WebSocket(
-      `ws://${window.location.host}/socket/run?script=${path}`
+      `ws://${window.location.host}/ws/run?script=${path}`
     );
     socket.addEventListener("open", function () {
       setState(STATES.RUNNING);
@@ -92,6 +94,7 @@ export default function Workbench() {
       if (code === 4000) {
         term.reset();
       } else {
+        console.log(...arguments);
         term.writeln(`\nconnection closed`);
       }
     });
@@ -121,7 +124,7 @@ export default function Workbench() {
     <div className="workbench">
       <aside>
         <Directory
-          onClickScript={(path) => {
+          onRunScript={(path) => {
             setCurrentScript(path);
             runScript(path);
           }}
