@@ -29,6 +29,9 @@ import prompt from "../Prompt";
 import * as nodePath from "path";
 import { UserContext } from "../../ctx";
 import CodeEditor from "../CodeEditor";
+import { Steps as IntroSteps } from "intro.js-react";
+import "intro.js/introjs.css";
+import "./style.scss";
 
 const { DirectoryTree } = Tree;
 
@@ -41,7 +44,14 @@ export default function Directory({ onRunScript }) {
   function updateDirectory() {
     getDirectoryTree().then((resp) => {
       setSelectedNode();
-      setTreeData(resp.data.data);
+      const data = resp.data.data;
+      if (!localStorage.getItem("intro")) {
+        data.push({ title: "演示文件.js", key: Date.now(), isLeaf: true });
+        setTimeout(() => {
+          setIntroEnable(true);
+        });
+      }
+      setTreeData(data);
     });
   }
 
@@ -261,10 +271,36 @@ export default function Directory({ onRunScript }) {
     uploadFile(file, pathJoin("/")).then(updateDirectory);
   }
 
+  const [introEnable, setIntroEnable] = useState(false);
   return (
     <>
+      <IntroSteps
+        enabled={introEnable}
+        initialStep={0}
+        steps={[
+          {
+            element: ".ant-tree-treenode:last-child",
+            intro: <span>"右键"单击文件，然后"运行"脚本</span>,
+            title: "运行脚本",
+          },
+        ]}
+        onExit={() => {
+          setIntroEnable(false);
+          const data = [...treeData];
+          data.pop();
+          setTreeData(data);
+          localStorage.setItem("intro", "true");
+        }}
+        options={{
+          showBullets: false,
+          showButtons: false,
+          exitOnOverlayClick: false,
+          highlightClass: "customHighlight",
+          tooltipPosition: "right",
+        }}
+      />
       <Dropdown overlay={getDropdownMenu} trigger={["contextMenu"]}>
-        <div style={{ height: "100%" }}>{directoryTree}</div>
+        <div style={{ height: "100%", overflow: "auto" }}>{directoryTree}</div>
       </Dropdown>
       <CodeEditor
         visible={editorVisible}

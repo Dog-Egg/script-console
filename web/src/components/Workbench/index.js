@@ -55,7 +55,7 @@ export default function Workbench() {
     figlet("Script Console", function (err, data) {
       term.writeln(data);
       term.writeln(
-        `\x1b[1;3;33m${'\n 请"右键"点击侧边栏文件，然后"运行"脚本'}\x1B[0m`
+        `\x1b[1;3;33m${'\n 请"右键"单击侧边栏文件，然后"运行"脚本'}\x1B[0m`
       );
     });
 
