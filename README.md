@@ -38,6 +38,13 @@ access:
 - 系统特定的 admin 为管理员组，其它组可以随意自定义组名；
 - 程序启动时会在运行日志打印一个的 admin token，用以首次启动系统时使用。
 
+## Testing
+
+```shell
+# server
+python -m unittest tests/test_*
+```
+
 ## 截图
 
 ![](./screenshot/screenshot1.png)

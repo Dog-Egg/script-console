@@ -1,7 +1,7 @@
 import "./App.scss";
 import React, { useContext, useState } from "react";
 import { Form, Input, Menu, Modal, Spin } from "antd";
-import {
+import Icon, {
   GithubOutlined,
   TeamOutlined,
   HomeOutlined,
@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import { signIn, signOut } from "./api";
 import { UserContext } from "./ctx";
+import { ReactComponent as TerminalSvg } from "./icons/terminal.svg";
 
 const Workbench = React.lazy(() => import("./components/Workbench"));
 const Users = React.lazy(() => import("./components/Users"));
@@ -19,6 +20,7 @@ const asideItemNames = {
   USERS: "2",
   SIGN_IN: "3",
   SIGN_OUT: "4",
+  TERMINAL: "5",
 };
 
 function App() {
@@ -48,7 +50,13 @@ function App() {
         >
           <Menu.Item icon={<HomeOutlined />} key={asideItemNames.HOME} />
           {currentUser.isAdmin && (
-            <Menu.Item icon={<TeamOutlined />} key={asideItemNames.USERS} />
+            <>
+              <Menu.Item icon={<TeamOutlined />} key={asideItemNames.USERS} />
+              <Menu.Item
+                icon={<Icon component={TerminalSvg} />}
+                key={asideItemNames.TERMINAL}
+              />
+            </>
           )}
           {currentUser.anonymous ? (
             <Menu.Item

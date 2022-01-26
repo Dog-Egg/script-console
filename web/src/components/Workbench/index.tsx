@@ -1,10 +1,5 @@
 import "./style.scss";
-import React, { useEffect, useState } from "react";
-import { Terminal } from "xterm";
-import "xterm/css/xterm.css";
-import { FitAddon } from "xterm-addon-fit";
-import { SearchAddon } from "xterm-addon-search";
-import { WebLinksAddon } from "xterm-addon-web-links";
+import React, { useEffect, useRef, useState } from "react";
 import { Input } from "antd";
 import { DownOutlined, SearchOutlined, UpOutlined } from "@ant-design/icons";
 import Icon from "@ant-design/icons";
@@ -17,118 +12,67 @@ import classNames from "classnames";
 import figlet from "figlet";
 import standard from "figlet/importable-fonts/Standard.js";
 import Directory from "../Directory";
+import Terminal from "../Terminal";
+import Resizable from "../Resizable";
 
 figlet.parseFont("Standard", standard);
 
-let term;
-let socket;
-let searchAddon;
-
 export default function Workbench() {
+  const terminalRef = useRef<Terminal>(null);
   // xterm
   useEffect(() => {
-    term = new Terminal({
-      cursorBlink: true,
-      tabStopWidth: 4,
-      convertEol: true,
-      theme: {
-        selection: "rgb(252,229,70)",
-      },
-    });
-
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(document.getElementById("terminal"));
-    fitAddon.fit();
-
-    searchAddon = new SearchAddon();
-    term.loadAddon(searchAddon);
-
-    term.loadAddon(new WebLinksAddon());
-
-    term.onData((data) => {
-      if (socket) {
-        socket.send(JSON.stringify({ type: "message", message: data }));
+    figlet("Script Console", function (err, data) {
+      if (terminalRef.current && data) {
+        terminalRef.current.writeln(data);
+        terminalRef.current.writeln(
+          `\x1b[1;3;33m\n 请"右键"单击侧边栏文件，然后"运行"脚本\x1B[0m`
+        );
       }
     });
-
-    figlet("Script Console", function (err, data) {
-      term.writeln(data);
-      term.writeln(
-        `\x1b[1;3;33m${'\n 请"右键"单击侧边栏文件，然后"运行"脚本'}\x1B[0m`
-      );
-    });
-
-    function onResize() {
-      fitAddon.fit();
-    }
-
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-    };
   }, []);
 
-  const [currentScript, setCurrentScript] = useState();
+  const [currentScript, setCurrentScript] = useState<string>();
 
-  function runScript(path) {
-    // clear
-    if (socket) {
-      socket.close(4000);
-    }
-    term.clear();
-
-    socket = new WebSocket(
-      `ws://${window.location.host}/ws/run?script=${path}`
-    );
-    socket.addEventListener("open", function () {
-      setState(STATES.RUNNING);
-    });
-
-    socket.addEventListener("message", function (event) {
-      term.write(event.data);
-    });
-
-    socket.addEventListener("close", function ({ code }) {
-      setState(STATES.STOPPED);
-      if (code === 4000) {
-        term.reset();
-      } else {
-        console.log(...arguments);
-        term.writeln(`\nconnection closed`);
-      }
-    });
+  function runScript(path: string) {
+    terminalRef.current &&
+      terminalRef.current.openWebSocket(
+        `ws://${window.location.host}/ws/run?script=${path}`
+      );
   }
 
   // 搜索
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState<string>("");
   useEffect(() => {
-    term.clearSelection();
+    if (!terminalRef.current) return;
+
+    terminalRef.current.clearSelection();
     if (search) {
-      searchAddon.findNext(search);
+      terminalRef.current.searchNext(search);
     }
   }, [search]);
 
   // 脚本运行状态
-  const STATES = {
-    RUNNING: 0,
-    STOPPED: 1,
-    STOP: 2,
-  };
-  const [state, setState] = useState(STATES.STOPPED);
-  const isStopped = state === STATES.STOPPED;
+  enum StateEnum {
+    RUNNING,
+    STOPPED,
+    STOP,
+  }
+  const [state, setState] = useState(StateEnum.STOPPED);
+  const isStopped = state === StateEnum.STOPPED;
   const isRunnable = isStopped && currentScript;
-  const isRunning = state === STATES.RUNNING;
+  const isRunning = state === StateEnum.RUNNING;
 
   return (
     <div className="workbench">
       <aside>
-        <Directory
-          onRunScript={(path) => {
-            setCurrentScript(path);
-            runScript(path);
-          }}
-        />
+        <Resizable resizeHandleAxis={"e"} width={300} height={"100%"}>
+          <Directory
+            onRunScript={(path: string) => {
+              setCurrentScript(path);
+              runScript(path);
+            }}
+          />
+        </Resizable>
       </aside>
       <main>
         <div className="toolbar">
@@ -152,14 +96,14 @@ export default function Workbench() {
                 component={ReRunSvg}
                 className={classNames(["op", "op-green"])}
                 onClick={() => {
-                  if (isRunning) {
+                  if (isRunning && currentScript) {
                     runScript(currentScript);
                   }
                 }}
               />
             )}
 
-            {state !== STATES.STOP ? (
+            {state !== StateEnum.STOP ? (
               <Icon
                 component={StopSvg}
                 className={classNames([
@@ -169,10 +113,8 @@ export default function Workbench() {
                 ])}
                 onClick={() => {
                   if (isRunning) {
-                    setState(STATES.STOP);
-                    socket.send(
-                      JSON.stringify({ type: "signal", message: "SIGINT" })
-                    );
+                    setState(StateEnum.STOP);
+                    terminalRef.current && terminalRef.current.closeWebSocket();
                   }
                 }}
               />
@@ -181,9 +123,7 @@ export default function Workbench() {
                 component={KillSvg}
                 className={classNames(["op", "op-red"])}
                 onClick={() => {
-                  socket.send(
-                    JSON.stringify({ type: "signal", message: "SIGKILL" })
-                  );
+                  terminalRef.current && terminalRef.current.killWebSocket();
                 }}
               />
             )}
@@ -199,23 +139,29 @@ export default function Workbench() {
                 <>
                   <UpOutlined
                     onClick={() => {
-                      searchAddon.findPrevious(search);
+                      terminalRef.current &&
+                        terminalRef.current.searchPrevious(search);
                     }}
                   />
                   <DownOutlined
                     onClick={() => {
-                      searchAddon.findNext(search);
+                      terminalRef.current &&
+                        terminalRef.current.searchNext(search);
                     }}
                   />
                 </>
               }
-              onInput={(e) => {
+              onInput={(e: any) => {
                 setSearch(e.target.value);
               }}
             />
           </div>
         </div>
-        <div id="terminal" />
+        <Terminal
+          ref={terminalRef}
+          onWebSocketOpen={() => setState(StateEnum.RUNNING)}
+          onWebSocketClose={() => setState(StateEnum.STOPPED)}
+        />
       </main>
     </div>
   );
