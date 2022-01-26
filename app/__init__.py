@@ -27,6 +27,7 @@ def make_app(debug=False):
 
             # ws
             (r'/ws/run', ws.RunScriptHandler),
+            (r'/ws/console', ws.ConsoleHandler),
 
             # static
             (r'/((?!api|ws).*)', StaticFileHandler, dict(path=static_path, default_filename='index.html')),

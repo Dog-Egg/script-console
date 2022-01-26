@@ -1,0 +1,9 @@
+@import "../../styles/variables";
+
+.console {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid $border-color;
+}

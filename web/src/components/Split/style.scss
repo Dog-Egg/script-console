@@ -1,0 +1,29 @@
+$size: 4px;
+
+.gutter {
+  transition: all 0.5s;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+
+  &-wrapper {
+    position: relative;
+  }
+
+  &:hover {
+    background-color: #1890ff;
+  }
+  &-horizontal {
+    cursor: ew-resize;
+    width: $size;
+    height: 100%;
+    transform: translateX(-50%);
+  }
+  &-vertical {
+    cursor: ns-resize;
+    width: 100%;
+    height: $size;
+    transform: translateY(-50%);
+  }
+}

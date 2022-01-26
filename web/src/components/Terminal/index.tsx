@@ -11,7 +11,10 @@ import elementResizeDetectorMaker from "element-resize-detector";
 interface Props {
   onWebSocketClose?: () => void;
   onWebSocketOpen?: () => void;
+  autoFocus?: boolean;
 }
+
+let id = 0;
 
 class Terminal extends React.Component<Props> {
   private readonly elementRef: React.RefObject<HTMLDivElement>;
@@ -21,10 +24,12 @@ class Terminal extends React.Component<Props> {
   private readonly webLinksAddon: WebLinksAddon;
   private resizer?: elementResizeDetectorMaker.Erd;
   private ws?: WebSocket;
+  private readonly id: number;
 
   constructor(props: Props) {
     super(props);
 
+    this.id = id++;
     this.elementRef = React.createRef();
 
     this.terminal = new _Terminal({
@@ -62,7 +67,11 @@ class Terminal extends React.Component<Props> {
     });
     this.resizer.listenTo(this.elementRef.current, () => {
       this.fitAddon.fit();
+      console.info("fit (terminal id %s)", this.id);
     });
+
+    // autoFocus
+    this.props.autoFocus && this.terminal.focus();
   }
 
   componentWillUnmount() {
@@ -119,18 +128,15 @@ class Terminal extends React.Component<Props> {
   }
 
   private messageWebSocket(value: string) {
-    this.ws &&
-      this.ws.send(JSON.stringify({ type: "message", message: value }));
+    this.ws?.send(JSON.stringify({ type: "message", message: value }));
   }
 
   closeWebSocket() {
-    this.ws &&
-      this.ws.send(JSON.stringify({ type: "signal", message: "SIGINT" }));
+    this.ws?.send(JSON.stringify({ type: "signal", message: "SIGINT" }));
   }
 
   killWebSocket() {
-    this.ws &&
-      this.ws.send(JSON.stringify({ type: "signal", message: "SIGKILL" }));
+    this.ws?.send(JSON.stringify({ type: "signal", message: "SIGKILL" }));
   }
 
   render() {

@@ -13,7 +13,8 @@ import figlet from "figlet";
 import standard from "figlet/importable-fonts/Standard.js";
 import Directory from "../Directory";
 import Terminal from "../Terminal";
-import Resizable from "../Resizable";
+import Split from "../Split";
+import Toolbar from "../Toolbar";
 
 figlet.parseFont("Standard", standard);
 
@@ -34,20 +35,17 @@ export default function Workbench() {
   const [currentScript, setCurrentScript] = useState<string>();
 
   function runScript(path: string) {
-    terminalRef.current &&
-      terminalRef.current.openWebSocket(
-        `ws://${window.location.host}/ws/run?script=${path}`
-      );
+    terminalRef.current?.openWebSocket(
+      `ws://${window.location.host}/ws/run?script=${path}`
+    );
   }
 
   // 搜索
   const [search, setSearch] = useState<string>("");
   useEffect(() => {
-    if (!terminalRef.current) return;
-
-    terminalRef.current.clearSelection();
+    terminalRef.current?.clearSelection();
     if (search) {
-      terminalRef.current.searchNext(search);
+      terminalRef.current?.searchNext(search);
     }
   }, [search]);
 
@@ -63,19 +61,17 @@ export default function Workbench() {
   const isRunning = state === StateEnum.RUNNING;
 
   return (
-    <div className="workbench">
+    <Split className="workbench" sizes={[20, 80]}>
       <aside>
-        <Resizable resizeHandleAxis={"e"} width={300} height={"100%"}>
-          <Directory
-            onRunScript={(path: string) => {
-              setCurrentScript(path);
-              runScript(path);
-            }}
-          />
-        </Resizable>
+        <Directory
+          onRunScript={(path: string) => {
+            setCurrentScript(path);
+            runScript(path);
+          }}
+        />
       </aside>
       <main>
-        <div className="toolbar">
+        <Toolbar>
           <div className="operations">
             {isStopped ? (
               <Icon
@@ -139,30 +135,31 @@ export default function Workbench() {
                 <>
                   <UpOutlined
                     onClick={() => {
-                      terminalRef.current &&
-                        terminalRef.current.searchPrevious(search);
+                      terminalRef.current?.searchPrevious(search);
                     }}
                   />
                   <DownOutlined
                     onClick={() => {
-                      terminalRef.current &&
-                        terminalRef.current.searchNext(search);
+                      terminalRef.current?.searchNext(search);
                     }}
                   />
                 </>
               }
-              onInput={(e: any) => {
+              onChange={(e: any) => {
                 setSearch(e.target.value);
+              }}
+              onPressEnter={() => {
+                terminalRef.current?.searchNext(search);
               }}
             />
           </div>
-        </div>
+        </Toolbar>
         <Terminal
           ref={terminalRef}
           onWebSocketOpen={() => setState(StateEnum.RUNNING)}
           onWebSocketClose={() => setState(StateEnum.STOPPED)}
         />
       </main>
-    </div>
+    </Split>
   );
 }

@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -5,51 +6,50 @@ import pty
 import select
 import signal
 import traceback
-import typing
 
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 from app.base import BaseHandler
+from fs import FileSystem
 
 logger = logging.getLogger(__name__)
 
 
-class RunScriptHandler(WebSocketHandler, BaseHandler):
-    fd: typing.Optional[int]
-    pid: typing.Optional[int]
+class PtyHandler(WebSocketHandler):
+    pid: int
+    fd: int
+    subprocess_finished: bool
+
+    def initialize(self):
+        self.subprocess_finished = False
+
+    def subprocess(self):
+        raise NotImplementedError
 
     async def open(self):
-        script = self.get_argument('script')
-        fs = await self.get_file_system()
-        pid, fd = pty.fork()
-        if pid == 0:
-            try:
-                fs.run_file(script)
-            finally:
-                traceback.print_exc()
-                exit(1)
+        self.pid, self.fd = pty.fork()
+        if self.pid == 0:
+            self.subprocess()
         else:
-            self.pid = pid
-            self.fd = fd
-            self.log('Run script %r' % script)
+            self.log('Process start (%s)' % self.__class__.__name__)
             self.loop()
 
     def on_message(self, message):
         data = json.loads(message)
-        _type, message = data['type'], data['message']
-        if _type == 'message':
+        t, message = data['type'], data['message']
+        if t == 'message':
             writeable = select.select([], [self.fd], [], 0)[1]
             if writeable:
                 if isinstance(message, str):
                     message = message.encode()
                 os.write(self.fd, message)
-        elif _type == 'signal':
+        elif t == 'signal':
             self.log('Client signal %s' % message)
             os.kill(self.pid, getattr(signal, message))
 
     def on_close(self):
-        if self.pid is not None:
+        if not self.subprocess_finished:
             self.log('Websocket closed (SIGKILL)')
             os.kill(self.pid, signal.SIGKILL)
 
@@ -62,8 +62,8 @@ class RunScriptHandler(WebSocketHandler, BaseHandler):
     def loop(self):
         pid, status = os.waitpid(self.pid, os.WNOHANG)
         if pid != 0:
+            self.subprocess_finished = True
             self.log('Process finished with status %d' % status)
-            self.pid, self.fd = None, None
             self.send('\nProcess finished with status %d\n' % status)
             return self.close(reason='finish')
 
@@ -75,7 +75,32 @@ class RunScriptHandler(WebSocketHandler, BaseHandler):
                 pass
             else:
                 self.send(data)
-        IOLoop.current().add_callback(self.loop)
+        IOLoop.current().add_timeout(datetime.timedelta(seconds=0.05), self.loop)
 
     def log(self, message):
         logger.info('[PID %d] %s', self.pid, message)
+
+
+class RunScriptHandler(PtyHandler, BaseHandler):
+    script: str
+    fs: FileSystem
+
+    async def prepare(self):
+        self.script = self.get_argument('script')
+        self.fs = await self.get_file_system()
+
+    def subprocess(self):
+        try:
+            self.fs.run_file(self.script)
+        finally:
+            traceback.print_exc()
+
+
+class ConsoleHandler(PtyHandler):
+    def subprocess(self):
+        env = dict(
+            TERM='xterm',
+            PATH=os.environ.get('PATH', ''),
+            LANG="en_US.UTF-8"
+        )
+        os.execlpe('bash', 'bash', env)

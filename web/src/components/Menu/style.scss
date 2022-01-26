@@ -1,0 +1,28 @@
+@import "../../styles/variables";
+
+.menu {
+  height: 100%;
+  position: relative;
+
+  .ant-menu {
+    height: 100%;
+    background-color: $background-color-gray;
+
+    &.ant-menu-inline-collapsed {
+      width: 100%;
+    }
+
+    .ant-menu-item-icon {
+      font-size: 20px !important;
+    }
+  }
+
+  .github {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    font-size: 24px;
+    color: rgba(0, 0, 0, 0.7);
+    transform: translateX(-50%);
+  }
+}

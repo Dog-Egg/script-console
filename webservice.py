@@ -13,17 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
+@click.option('--host', default='127.0.0.1')
+@click.option('--port', default=8310, type=click.INT)
 @click.option('--debug', is_flag=True)
-def main(debug):
-    import socket
-    port = 8310
+def main(host, port, debug):
     app = make_app(debug)
-    app.listen(port)
-
-    try:
-        host = socket.gethostbyname(socket.gethostname())
-    except socket.gaierror:
-        host = 'localhost'
+    app.listen(port, host)
 
     db.init()
     logger.info('Running on: http://%s:%d', host, port)
