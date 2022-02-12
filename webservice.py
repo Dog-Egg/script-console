@@ -318,19 +318,11 @@ def make_app(debug=False):
 
 @click.command()
 @click.option('--debug', is_flag=True)
-def main(debug):
-    import socket
-    if debug:
-        port = 8300
-    else:
-        port = 8310
+@click.option('--host', default='127.0.0.1')
+@click.option('--port', default=8310)
+def main(host, port, debug):
     app = make_app(debug)
-    app.listen(port)
-
-    try:
-        host = socket.gethostbyname(socket.gethostname())
-    except socket.gaierror:
-        host = 'localhost'
+    app.listen(port, host)
 
     db.init()
     logger.info('Running on: http://%s:%d', host, port)
