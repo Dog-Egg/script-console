@@ -10,6 +10,7 @@ import traceback
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
+import settings
 from app.base import BaseHandler
 from fs import FileSystem
 
@@ -104,4 +105,5 @@ class ConsoleHandler(PtyHandler):
             PATH=os.environ.get('PATH', ''),
             LANG="en_US.UTF-8"
         )
+        os.chdir(settings.SCRIPTS_DIR)
         os.execlpe('bash', 'bash', env)

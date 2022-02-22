@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 def initialize_config_file():
     """初始化配置文件"""
+    os.makedirs(settings.SCRIPTS_DIR, exist_ok=True)
     open(os.path.join(settings.SCRIPTS_DIR, settings.CONFIG_FILENAME), 'a').close()
 
 
