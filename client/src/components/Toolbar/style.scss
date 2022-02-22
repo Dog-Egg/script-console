@@ -1,0 +1,28 @@
+@import "../../styles/variables";
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 5px 12px;
+  background-color: $background-color-gray;
+  font-size: 12px;
+  //border: 1px solid rgb(240, 240, 240);
+
+  &-close {
+    $size: 16px;
+    margin-left: auto;
+    margin-right: 10px;
+    font-size: 10px;
+    width: $size;
+    height: $size;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+  }
+}

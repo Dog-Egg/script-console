@@ -1,9 +1,0 @@
-tornado
-click
-gitignore_parser
-mock
-sqlalchemy
-aiosqlite
-PyYAML
-marshmallow
-aiofiles

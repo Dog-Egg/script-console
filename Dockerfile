@@ -2,7 +2,7 @@ FROM node:12 as builder
 
 WORKDIR /code
 
-COPY web .
+COPY client .
 
 RUN yarn && npm run build
 
@@ -13,13 +13,13 @@ WORKDIR /code
 ENV SC_SCRIPTS_DIR="/scripts"
 ENV SC_DATA_DIR="/data"
 
-COPY . .
-COPY --from=builder /code/build ./web/build
+COPY server .
+COPY --from=builder /code/build /var/www/html/script-console
 
 RUN pip install -r requirements.txt
 
-VOLUME /scripts
+VOLUME ["/scripts", "/data"]
 
 EXPOSE 8310
 
-CMD ["python", "webservice.py"]
+CMD ["python", "server.py", "--host=0.0.0.0"]

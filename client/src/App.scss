@@ -1,0 +1,24 @@
+.layout {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+
+  &-menu {
+    width: 50px;
+    flex-shrink: 0;
+  }
+
+  &-main {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    &-upper {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    &-lower {
+    }
+  }
+}
