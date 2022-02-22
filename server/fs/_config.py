@@ -13,7 +13,7 @@ class ConfigModel(BaseModel):
 
     class AccessModel(BaseModel):
         pattern: str
-        groups: typing.List[str]
+        groups: typing.List[str] = []
 
     commands: typing.List[CommandModel] = []
     access: typing.List[AccessModel] = []
