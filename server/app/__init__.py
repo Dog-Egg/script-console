@@ -5,7 +5,6 @@ from . import file, ws, auth
 
 
 def make_app(debug=False):
-    static_path = os.path.join(os.path.dirname(__file__), 'web/build')
     return Application(
         [
             # auth
@@ -30,7 +29,9 @@ def make_app(debug=False):
             (r'/ws/console', ws.ConsoleHandler),
 
             # static
-            (r'/((?!api|ws).*)', StaticFileHandler, dict(path=static_path, default_filename='index.html')),
+            (r'/((?!api|ws).*)', StaticFileHandler, dict(path='/var/www/html/script-console',
+                                                         default_filename='index.html')
+             ),
         ],
         debug=debug,
         cookie_secret='__secret__'

@@ -94,6 +94,7 @@ class RunScriptHandler(PtyHandler, BaseHandler):
             self.fs.run_file(self.script)
         finally:
             traceback.print_exc()
+            exit(1)
 
 
 class ConsoleHandler(PtyHandler):
