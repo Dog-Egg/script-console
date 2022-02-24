@@ -1,5 +1,3 @@
-import os
-
 from tornado.web import Application, StaticFileHandler
 from . import file, ws, auth
 

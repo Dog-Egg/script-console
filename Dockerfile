@@ -22,4 +22,4 @@ VOLUME ["/scripts", "/data"]
 
 EXPOSE 8310
 
-CMD ["python", "server.py", "--host=0.0.0.0"]
+CMD ["python", "entry.py", "--host=0.0.0.0"]

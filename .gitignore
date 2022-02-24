@@ -1,2 +1,13 @@
+# Python
+__pycache__/
+
+# Node
+node_modules/
+
+# Project
+server/data/
+server/scripts/
+
+# Other
 .idea/
 .DS_Store

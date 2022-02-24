@@ -7,10 +7,10 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, String, Integer, select, insert
 
 import settings
+from settings import DATA_DIR
 from utils import gen_token
 
-DB_DIR = os.getenv('SC_DATA_DIR') or os.path.dirname(__file__)
-DB_FILE = os.path.join(DB_DIR, 'sqlite.db')
+DB_FILE = os.path.join(DATA_DIR, 'sqlite.db')
 
 engine = create_async_engine('sqlite+aiosqlite:///%s' % DB_FILE, echo=False)
 
@@ -33,7 +33,7 @@ class User(Base):
 
 
 def init():
-    os.makedirs(DB_DIR, exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
 
     async def main():
         async with engine.begin() as conn:
