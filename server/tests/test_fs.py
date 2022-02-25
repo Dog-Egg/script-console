@@ -2,8 +2,6 @@ import os
 import unittest
 import tempfile
 
-from mock import mock
-
 from fs import FileSystem
 
 
@@ -78,33 +76,6 @@ class TestFileSystem(unittest.TestCase):
             fs.make_dir('b')
             with self.assertRaises(FileExistsError):
                 fs.rename('b', 'a')
-
-    def test_run_file(self):
-        def _open(filename, *args, **kwargs):
-            if filename == 'foo/.sc-conf.yaml':
-                return mock.mock_open(read_data="""
-                commands:
-                    -   pattern: 123\.py
-                        program: python3.2
-                        environment:
-                            PYTHONPATH: /site-packages3.2
-
-                    -   pattern: .*\.py
-                        program: python
-                """)()
-            return open(filename, *args, **kwargs)
-
-        execlpe_mock = mock.Mock()
-
-        with mock.patch('fs._config.open', _open):
-            with mock.patch('fs._fs.os.execlpe', execlpe_mock):
-                with mock.patch.multiple('fs._fs', print=mock.DEFAULT):
-                    fs = FileSystem('foo')
-                    fs.run_file('123.py')
-
-        env = os.environ.copy()
-        env.update(PYTHONPATH='/site-packages3.2')
-        execlpe_mock.assert_called_once_with('python3.2', 'python3.2', 'foo/123.py', env)
 
 
 if __name__ == '__main__':

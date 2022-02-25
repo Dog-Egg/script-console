@@ -1,0 +1,12 @@
+commands:
+  - pattern: \.py$
+    program: python
+
+  - pattern: \.sh$
+    program: bash
+
+console:
+  shell: /bin/bash
+  environments:
+    - name: LANG
+      value: zh_CN.UTF-8

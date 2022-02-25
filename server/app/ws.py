@@ -11,13 +11,12 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 import settings
-from app.base import BaseHandler
-from fs import FileSystem
+from app.base import BaseHandler, admin_required
 
 logger = logging.getLogger(__name__)
 
 
-class PtyHandler(WebSocketHandler):
+class PtyHandler(WebSocketHandler, BaseHandler):
     pid: int
     fd: int
     subprocess_finished: bool
@@ -61,13 +60,6 @@ class PtyHandler(WebSocketHandler):
             pass
 
     def loop(self):
-        pid, status = os.waitpid(self.pid, os.WNOHANG)
-        if pid != 0:
-            self.subprocess_finished = True
-            self.log('Process finished with status %d' % status)
-            self.send('\nProcess finished with status %d\n' % status)
-            return self.close(reason='finish')
-
         readable = select.select([self.fd], [], [], 0)[0]
         if readable:
             try:
@@ -76,34 +68,58 @@ class PtyHandler(WebSocketHandler):
                 pass
             else:
                 self.send(data)
+
+        pid, status = os.waitpid(self.pid, os.WNOHANG)
+        if pid != 0:
+            self.subprocess_finished = True
+            self.log('Process finished with status %d' % status)
+            self.send('\nProcess finished with status %d\n' % status)
+            return self.close(reason='finish')
+
         IOLoop.current().add_timeout(datetime.timedelta(seconds=0.05), self.loop)
 
     def log(self, message):
         logger.info('[PID %d] %s', self.pid, message)
 
 
-class RunScriptHandler(PtyHandler, BaseHandler):
-    script: str
-    fs: FileSystem
+class RunScriptHandler(PtyHandler):
+    path: str
 
-    async def prepare(self):
-        self.script = self.get_argument('script')
-        self.fs = await self.get_file_system()
+    def prepare(self):
+        self.path = self.get_argument('script')
 
     def subprocess(self):
         try:
-            self.fs.run_file(self.script)
+            command = self.config.get_command(self.path)
+            if not command:
+                raise RuntimeError('Not found executable program')
+
+            path = self.fs.join(self.path)
+            program = command.program
+            name = os.path.basename(program)
+            env = os.environ.copy()
+            env.update(command.environment)
+            print('\033[1;33m' + ('Command "%s"' % ' '.join([program, path])) + '\x1B[0m', os.linesep)
+            os.execlpe(program, name, path, env)
         finally:
             traceback.print_exc()
             exit(1)
 
 
 class ConsoleHandler(PtyHandler):
+    @admin_required
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
     def subprocess(self):
         env = dict(
             TERM='xterm',
             PATH=os.environ.get('PATH', ''),
-            LANG="en_US.UTF-8"
+            LANG="zh_CN.UTF-8"
         )
+        env.update(self.config.console.environment)
+
         os.chdir(settings.SCRIPTS_DIR)
-        os.execlpe('bash', 'bash', env)
+
+        shell = self.config.console.shell or '/bin/bash'
+        os.execlpe(shell, shell, env)

@@ -1,4 +1,5 @@
 import React from "react";
+import "./style.scss";
 
 import "xterm/css/xterm.css";
 import { Terminal as _Terminal } from "xterm";
@@ -67,7 +68,6 @@ class Terminal extends React.Component<Props> {
     });
     this.resizer.listenTo(this.elementRef.current, () => {
       this.fitAddon.fit();
-      console.info("fit (terminal id %s)", this.id);
     });
 
     // autoFocus
@@ -140,9 +140,7 @@ class Terminal extends React.Component<Props> {
   }
 
   render() {
-    return (
-      <div style={{ height: "100%", width: "100%" }} ref={this.elementRef} />
-    );
+    return <div className="terminal-wrapper" ref={this.elementRef} />;
   }
 }
 

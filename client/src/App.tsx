@@ -5,7 +5,7 @@ import Menu from "./components/Menu";
 import Workbench from "./components/Workbench";
 import Users from "./components/Users";
 import Split from "./components/Split";
-import { SplitProps } from "react-split";
+import Config from "./components/Config";
 
 function App() {
   const [currentMenu, setCurrentMenu] = useState(Menu.itemNames.WORKBENCH);
@@ -15,6 +15,7 @@ function App() {
     switch (name) {
       case Menu.itemNames.WORKBENCH:
       case Menu.itemNames.USERS:
+      case Menu.itemNames.CONFIG:
         setCurrentMenu(name);
         selected();
         break;
@@ -24,27 +25,26 @@ function App() {
     }
   };
 
-  const splitOptions: SplitProps = {
-    direction: "vertical",
-    sizes: enableConsole ? [70, 30] : [100, 0],
-    minSize: enableConsole ? undefined : 0,
-  };
-
   return (
     <div className="layout">
       <div className="layout-menu">
         <Menu defaultItemName={currentMenu} onClickMenuItem={onClickMenuItem} />
       </div>
-      <Split className="layout-main" {...splitOptions}>
-        <div className="layout-main-upper">
+      <Split
+        className="layout-main"
+        sizes={enableConsole ? [70, 30] : undefined}
+        direction="vertical"
+      >
+        <div className="layout-main-part1">
           {currentMenu === Menu.itemNames.WORKBENCH && <Workbench />}
           {currentMenu === Menu.itemNames.USERS && <Users />}
+          {currentMenu === Menu.itemNames.CONFIG && <Config />}
         </div>
-        <div className="layout-main-lower">
-          {enableConsole && (
+        {enableConsole && (
+          <div className="layout-main-part2">
             <Console onClose={() => setEnabledConsole(false)} />
-          )}
-        </div>
+          </div>
+        )}
       </Split>
     </div>
   );

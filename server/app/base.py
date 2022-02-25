@@ -8,10 +8,13 @@ from tornado.web import RequestHandler, HTTPError
 
 import db
 import settings
+from config import Config
 from fs import FileSystem
 
 
 class BaseHandler(RequestHandler):
+    fs = FileSystem(settings.SCRIPTS_DIR)
+
     def compute_etag(self):
         pass
 
@@ -40,9 +43,14 @@ class BaseHandler(RequestHandler):
         self.set_status(status_code)
         return self.finish({'message': message, 'errors': errors})
 
-    async def get_file_system(self):
-        user = await self.current_user
-        return FileSystem(settings.SCRIPTS_DIR, group=user and user.group)
+    @property
+    def config(self) -> Config:
+        key = '_sc_config'
+        if not hasattr(self, key):
+            config = Config()
+            config.read_yaml(settings.CONFIG_FILE_PATH)
+            setattr(self, key, config)
+        return getattr(self, key)
 
 
 def admin_required(fn):

@@ -5,6 +5,7 @@ import Icon, {
   HomeOutlined,
   LoginOutlined,
   LogoutOutlined,
+  SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import { ReactComponent as TerminalSvg } from "../../icons/terminal.svg";
@@ -18,6 +19,7 @@ enum menuItemNames {
   SIGN_IN = "3",
   SIGN_OUT = "4",
   CONSOLE = "5",
+  CONFIG = "6",
 }
 
 interface Props {
@@ -55,6 +57,10 @@ const Menu: MenuComponent = (props) => {
         {currentUser.isAdmin && (
           <>
             <AntMenu.Item icon={<TeamOutlined />} key={menuItemNames.USERS} />
+            <AntMenu.Item
+              icon={<SettingOutlined />}
+              key={menuItemNames.CONFIG}
+            />
             <AntMenu.Item
               icon={<Icon component={TerminalSvg} />}
               key={menuItemNames.CONSOLE}

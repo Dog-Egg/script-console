@@ -1,5 +1,5 @@
 from tornado.web import Application, StaticFileHandler
-from . import file, ws, auth
+from . import file, ws, auth, config
 
 
 def make_app(debug=False):
@@ -21,6 +21,9 @@ def make_app(debug=False):
             (r'/api/file/remove', file.FileRemoveHandler),
             (r'/api/file/upload', file.FileUploadHandler),
             (r'/api/file/download', file.FileDownloadHandler),
+
+            # config
+            (r'/api/config', config.ConfigHandler),
 
             # ws
             (r'/ws/run', ws.RunScriptHandler),

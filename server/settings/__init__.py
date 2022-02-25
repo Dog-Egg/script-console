@@ -28,3 +28,6 @@ def _overwrite():
 
 
 _overwrite()
+
+# computed
+CONFIG_FILE_PATH = os.path.join(SCRIPTS_DIR, CONFIG_FILENAME)

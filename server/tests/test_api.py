@@ -37,15 +37,11 @@ class TestFile(AsyncHTTPTestCase):
         mock1 = mock.Mock()
         mock1.return_value = f1
 
-        f2 = Future()
         self.__fs = FileSystem(tmp_dir.name)
-        f2.set_result(self.__fs)
-        mock2 = mock.Mock()
-        mock2.return_value = f2
         self.__patch = mock.patch.multiple(
             BaseHandler,
             get_current_user=mock1,
-            get_file_system=mock2,
+            fs=self.__fs,
         )
         self.__patch.start()
 

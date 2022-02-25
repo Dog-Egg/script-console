@@ -10,10 +10,10 @@ import {
 } from "antd";
 import { getUsers, delUser, addUser } from "../../api";
 import React from "react";
-import "./style.scss";
 import { PlusOutlined } from "@ant-design/icons";
 import { UserContext } from "../../ctx";
 import uniq from "lodash/uniq";
+import Panel from "../Panel";
 
 export default function Users() {
   const [users, setUsers] = React.useState([]);
@@ -38,8 +38,8 @@ export default function Users() {
   const [groupOptions, setGroupOptions] = React.useState([]);
 
   return (
-    <div className="users">
-      <header>
+    <Panel title="用户管理">
+      <header style={{ marginBottom: "12px" }}>
         <Button
           icon={<PlusOutlined />}
           type="primary"
@@ -131,6 +131,6 @@ export default function Users() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </Panel>
   );
 }

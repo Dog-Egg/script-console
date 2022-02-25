@@ -257,3 +257,5 @@ dist
 .pnp.*
 
 .idea/
+server/data/
+server/scripts/
