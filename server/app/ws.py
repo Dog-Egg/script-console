@@ -99,7 +99,6 @@ class RunScriptHandler(PtyHandler):
             name = os.path.basename(program)
             env = os.environ.copy()
             env.update(command.environment)
-            print('\033[1;33m' + ('Command "%s"' % ' '.join([program, path])) + '\x1B[0m', os.linesep)
             os.execlpe(program, name, path, env)
         finally:
             traceback.print_exc()

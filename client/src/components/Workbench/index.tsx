@@ -68,6 +68,11 @@ export default function Workbench() {
             setCurrentScript(path);
             runScript(path);
           }}
+          onSelect={(keys: string[], { node }: { node: any }) => {
+            if (node.isLeaf) {
+              setCurrentScript(keys[0]);
+            }
+          }}
         />
       </aside>
       <main>
@@ -124,6 +129,9 @@ export default function Workbench() {
               />
             )}
           </div>
+          <i style={{ opacity: 0.6, color: "#777", marginLeft: "10px" }}>
+            {currentScript}
+          </i>
           <div className="search">
             <Input
               allowClear

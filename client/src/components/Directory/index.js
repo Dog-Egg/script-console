@@ -35,7 +35,7 @@ import "./style.scss";
 
 const { DirectoryTree } = Tree;
 
-export default function Directory({ onRunScript }) {
+export default function Directory({ onRunScript, onSelect }) {
   const currentUser = useContext(UserContext);
   const [treeData, setTreeData] = useState();
   const [selectedKeys, setSelectedKeys] = useState([]);
@@ -91,6 +91,7 @@ export default function Directory({ onRunScript }) {
       selectedKeys={selectedKeys}
       treeData={treeData}
       onSelect={function (keys, { node }) {
+        onSelect && onSelect(...arguments)
         setSelectedKeys(keys);
         setSelectedNode(node);
       }}
