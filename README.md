@@ -2,6 +2,10 @@
 
 提供在 Web 端管理、编辑和运行脚本文件
 
+<p align="center">
+<img src="./screenshot/1.jpg" width="600" alt="截图">
+</p>
+
 ## 安装
 
 ### Docker
@@ -22,22 +26,6 @@ docker run --rm -v /xxx/scripts:/scripts -v /xxx/data:/data -p 8310:8310 -d scri
 docker pull dogegg/script-console:latest
 ```
 
-## .sc-conf.yaml
-
-脚本配置文件
-
-```yaml
-commands:
-  - pattern: \.py$    # [必填] 正则表达式，匹配 .py 结尾的文件
-    program: python   # [必填] 使用 python 来执行文件
-    environment: # 环境变量
-      PYTHONPATH: /xxx/site-packages
-access:
-  - pattern: adminGroup   # [必填] 正则表达式
-    groups: # 用户组访问权限
-      - admin
-```
-
 ## 用户系统
 
 - 不登录会以匿名用户的形式展示；
@@ -45,6 +33,7 @@ access:
 - 程序启动时会在运行日志打印一个的 admin token，用以首次启动系统时使用。
 
 ## Building & Running
+
 ```
 node >= 12
 python >= 3.6
@@ -82,10 +71,6 @@ server {
     }
 }
 ```
-
-## 截图
-
-![](./screenshot/1.jpg)
 
 ## TODO List
 
