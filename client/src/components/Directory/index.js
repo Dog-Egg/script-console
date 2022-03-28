@@ -91,7 +91,7 @@ export default function Directory({ onRunScript, onSelect }) {
       selectedKeys={selectedKeys}
       treeData={treeData}
       onSelect={function (keys, { node }) {
-        onSelect && onSelect(...arguments)
+        onSelect && onSelect(...arguments);
         setSelectedKeys(keys);
         setSelectedNode(node);
       }}

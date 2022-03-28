@@ -16,7 +16,7 @@ export function readFile(path) {
 
 export function writeFile(path, content) {
   const formData = new FormData();
-  if (content) formData.append("content", content);
+  formData.append("content", content);
   return request({
     url: `/file/write`,
     method: "POST",

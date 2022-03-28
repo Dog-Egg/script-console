@@ -1,11 +1,38 @@
 import { Modal, Spin } from "antd";
-import React, { Suspense, useRef, useState } from "react";
+import React, { Suspense, useState, useMemo } from "react";
+import { Editor } from "codemirror";
 
 const CodeMirror = React.lazy(() => import("../CodeMirror"));
 
-export default function CodeEditor(props) {
+interface Props {
+  title: string;
+  visible: boolean;
+  content: string;
+  onCancel: () => void;
+  onOk: (text: string) => void;
+}
+
+const CodeEditor: React.FC<Props> = (props) => {
   const [codeChanged, setCodeChanged] = useState(false);
-  const codeMirrorRef = useRef();
+
+  const [editor, setEditor] = useState<Editor>();
+
+  const mode = useMemo<string | undefined>(() => {
+    if (!props.title) return;
+
+    const values = props.title.split(".");
+    if (values.length < 2) return;
+
+    const ext = values.pop() as string;
+    return (
+      {
+        py: "python",
+        js: "javascript",
+        sh: "shell",
+      }[ext] || ext
+    );
+  }, [props.title]);
+
   return (
     <Modal
       title={props.title}
@@ -21,8 +48,7 @@ export default function CodeEditor(props) {
       okButtonProps={{ disabled: !codeChanged }}
       okText="保存"
       onOk={() => {
-        const editor = codeMirrorRef.current["editor"];
-        const content = editor.getValue();
+        const content = editor!.getValue();
         props.onOk(content);
       }}
     >
@@ -34,8 +60,8 @@ export default function CodeEditor(props) {
         }
       >
         <CodeMirror
-          ref={codeMirrorRef}
           editorDidMount={(editor) => {
+            setEditor(editor);
             setTimeout(() => {
               editor.refresh();
             }, 200);
@@ -43,11 +69,7 @@ export default function CodeEditor(props) {
           value={props.content}
           options={{
             lineNumbers: true,
-            mode: {
-              py: "python",
-              js: "javascript",
-              yaml: "yaml",
-            }[(props.title || "").split(".").pop()],
+            mode,
           }}
           onChange={function (_, __, value) {
             setCodeChanged(value !== props.content);
@@ -56,4 +78,6 @@ export default function CodeEditor(props) {
       </Suspense>
     </Modal>
   );
-}
+};
+
+export default CodeEditor;
