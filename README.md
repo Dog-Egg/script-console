@@ -1,9 +1,7 @@
 # script-console
 
-提供在 Web 端管理、编辑和运行脚本文件
-
 <p align="center">
-<img src="./screenshot/1.jpg" width="600" alt="截图">
+<img src="./screenshot/1.gif" width="600" alt="截图">
 </p>
 
 ## 安装
@@ -11,7 +9,7 @@
 ### Docker
 
 ```shell
-git clone https://github.com/Dog-Egg/script-console.git
+git clone -b master --depth 1 https://github.com/Dog-Egg/script-console.git
 
 cd script-console
 

@@ -11,9 +11,9 @@ import {
 import { getUsers, delUser, addUser } from "../../api";
 import React from "react";
 import { PlusOutlined } from "@ant-design/icons";
-import { UserContext } from "../../ctx";
 import uniq from "lodash/uniq";
 import Panel from "../Panel";
+import {useCurrentUser} from "../../utils/hooks";
 
 export default function Users() {
   const [users, setUsers] = React.useState([]);
@@ -30,7 +30,7 @@ export default function Users() {
     });
   }
 
-  const currentUser = React.useContext(UserContext);
+  const currentUser = useCurrentUser();
 
   const [form] = Form.useForm();
   const [formModalVisible, setFormModalVisible] = React.useState(false);

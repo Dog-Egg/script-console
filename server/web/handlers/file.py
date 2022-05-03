@@ -4,12 +4,12 @@ import typing
 
 from tornado.web import MissingArgumentError
 
-import settings
+from conf import settings
 from utils import asynctools, refactor_filename
-from .base import BaseHandler, admin_required
+from web.base import APIHandler, admin_required
 
 
-class FileTreeHandler(BaseHandler):
+class FileTreeHandler(APIHandler):
     current_user_group: typing.Optional[str]
 
     async def prepare(self):
@@ -74,7 +74,7 @@ class FileTreeHandler(BaseHandler):
         return wrapper
 
 
-class MakeDirHandler(BaseHandler):
+class MakeDirHandler(APIHandler):
     @admin_required
     def post(self):
         path = self.get_argument('path')
@@ -85,7 +85,7 @@ class MakeDirHandler(BaseHandler):
         self.finish()
 
 
-class MakeFileHandler(BaseHandler):
+class MakeFileHandler(APIHandler):
     @admin_required
     def post(self):
         path = self.get_argument('path')
@@ -96,7 +96,7 @@ class MakeFileHandler(BaseHandler):
         self.finish()
 
 
-class FileReadHandler(BaseHandler):
+class FileReadHandler(APIHandler):
     @admin_required
     def get(self):
         path = self.get_argument('path')
@@ -113,20 +113,20 @@ class FileReadHandler(BaseHandler):
         self.finish({'content': content, 'path': path})
 
 
-class FileWriteHandler(BaseHandler):
+class FileWriteHandler(APIHandler):
     @admin_required
     def post(self):
         path = self.get_argument('path')
-        content = self.get_body_argument('content')
+        content: str = self.get_body_argument('content')
         full_path = self.fs.join(path)
         try:
             with open(full_path, 'w') as fp:
-                fp.write(content)
+                fp.write(content.replace('\r', ''))
         except IsADirectoryError:
             return self.finish_error(message='目录不可写')
 
 
-class FileRenameHandler(BaseHandler):
+class FileRenameHandler(APIHandler):
     @admin_required
     def post(self):
         source = self.get_argument('source')
@@ -139,7 +139,7 @@ class FileRenameHandler(BaseHandler):
             return self.finish_error(message='文件或目录不存在')
 
 
-class FileRemoveHandler(BaseHandler):
+class FileRemoveHandler(APIHandler):
     @admin_required
     def post(self):
         path = self.get_argument('path')
@@ -147,7 +147,7 @@ class FileRemoveHandler(BaseHandler):
         self.finish()
 
 
-class FileUploadHandler(BaseHandler):
+class FileUploadHandler(APIHandler):
     @admin_required
     async def post(self):
         if 'file' not in self.request.files:
@@ -169,7 +169,7 @@ class FileUploadHandler(BaseHandler):
         await self.finish()
 
 
-class FileDownloadHandler(BaseHandler):
+class FileDownloadHandler(APIHandler):
     @admin_required
     async def get(self):
         path = self.get_argument('path')

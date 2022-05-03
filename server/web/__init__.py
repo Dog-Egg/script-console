@@ -1,8 +1,11 @@
 from tornado.web import Application, StaticFileHandler
-from . import file, ws, auth, config
+
+from conf import settings, Config
+from fs import FileSystem
+from .handlers import auth, config, file, ws
 
 
-def make_app(debug=False):
+def make_app():
     return Application(
         [
             # auth
@@ -34,6 +37,8 @@ def make_app(debug=False):
                                                          default_filename='index.html')
              ),
         ],
-        debug=debug,
-        cookie_secret='__secret__'
+        debug=settings.DEBUG,
+        cookie_secret=settings.COOKIE_SECRET,
+        fs=FileSystem(settings.SCRIPTS_DIR),
+        config=Config.sync_build()
     )

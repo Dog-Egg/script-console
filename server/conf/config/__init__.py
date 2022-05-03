@@ -4,10 +4,12 @@ import os
 import re
 import typing
 
+import sqlalchemy
 import yaml
 from pydantic import BaseModel, constr
+from tornado.ioloop import IOLoop
 
-import settings
+import db
 
 
 class ConfigModel(BaseModel):
@@ -33,12 +35,16 @@ class ConfigModel(BaseModel):
     class ConsoleModel(EnvMixin):
         shell: constr(strip_whitespace=True) = None
 
+    class AuthenticationModel(BaseModel):
+        allow_anonymous: bool = False
+
     commands: typing.List[CommandModel] = []
     access: typing.List[AccessModel] = []
     console: ConsoleModel = ConsoleModel()
+    authentication: AuthenticationModel = AuthenticationModel()
 
 
-def _catch_error(method):
+def _catch_error(method) -> typing.Any:
     @functools.wraps(method)
     def decorator(self: 'Config', *args, **kwargs):
         try:
@@ -54,24 +60,22 @@ class Config:
         self.error = None
         self._data = ConfigModel()
 
-    @property
-    def data(self):
+    def to_dict(self):
         return self._data.dict()
+
+    def to_json(self):
+        return self._data.json()
 
     def read_dict(self, data: dict):
         self._data = ConfigModel(**data)
 
     @_catch_error
-    def read_yaml(self, path: str):
-        with open(path) as fp:
-            data = yaml.load(fp, Loader=yaml.CLoader)
-        self.read_dict(data)
+    def read_yaml(self, stream):
+        self.read_dict(yaml.load(stream, Loader=yaml.CLoader))
 
     @_catch_error
-    def read_json(self, path: str):
-        with open(path) as fp:
-            data = json.load(fp)
-        self.read_dict(data)
+    def read_json(self, content: str):
+        self.read_dict(json.loads(content))
 
     @property
     def commands(self):
@@ -85,18 +89,29 @@ class Config:
     def console(self):
         return self._data.console
 
+    @property
+    def authentication(self):
+        return self._data.authentication
+
     def get_command(self, path):
         for c in self.commands:
             if re.search(c.pattern, path):
                 return c
 
+    @classmethod
+    def sync_build(cls):
+        instance = cls()
 
-def initialize_file():
-    """初始化配置文件"""
-    if os.path.exists(settings.CONFIG_FILE_PATH):
-        return
+        async def main():
+            async with db.async_session() as session:
+                query: db.Config = (await session.execute(
+                    sqlalchemy.select(db.Config).where(db.Config.version == 'v1'))).scalar_one_or_none()
+                if query:
+                    instance.read_json(query.data)
+                # TODO 兼容 .sc-conf.yaml 配置内容
+                else:
+                    with open(os.path.join(os.path.dirname(__file__), 'template.yaml')) as fp:
+                        instance.read_yaml(fp)
 
-    os.makedirs(settings.SCRIPTS_DIR, exist_ok=True)
-    with open(os.path.join(os.path.dirname(__file__), 'template.yaml'), 'r') as tmpl:
-        with open(settings.CONFIG_FILE_PATH, 'w') as fp:
-            fp.write(tmpl.read())
+        IOLoop.current().run_sync(main)
+        return instance

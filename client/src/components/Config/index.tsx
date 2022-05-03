@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   Collapse,
+  Checkbox,
   Form,
   Input,
   message,
@@ -17,7 +18,7 @@ import {
   PlusOutlined,
   UpCircleOutlined,
 } from "@ant-design/icons";
-import { getConfig, updateConfig } from "../../api";
+import { getConfig as _getConfig, updateConfig } from "../../api";
 
 const requiredRule = [
   { required: true, message: "" },
@@ -28,10 +29,15 @@ const Config = () => {
   const [form] = Form.useForm();
 
   const [configResponse, setConfigResponse] = React.useState<any>();
-  React.useEffect(() => {
-    getConfig().then((resp) => {
+
+  function getConfig() {
+    _getConfig().then((resp) => {
       setConfigResponse(resp.data);
     });
+  }
+
+  React.useEffect(() => {
+    getConfig();
   }, []);
 
   React.useEffect(() => {
@@ -40,12 +46,12 @@ const Config = () => {
     }
   }, [configResponse, form]);
 
+  // const [dingTalkEnable, setDingTalkEnable] = React.useState(false);
+
   function onFinish(values: any) {
     setUpdateLoading(true);
     updateConfig(values)
-      .then((resp) => {
-        setConfigResponse(resp.data);
-      })
+      .then(getConfig)
       .then(() => {
         void message.success("保存成功");
       })
@@ -270,6 +276,55 @@ const Config = () => {
                           </>
                         )}
                       </Form.List>
+                    </Form.Item>
+                  </div>
+                </Collapse.Panel>
+              </Collapse>
+
+              <Collapse defaultActiveKey="1">
+                <Collapse.Panel header="登录选项" key="1">
+                  {/*
+                  <div className="config-item">
+                    <Form.Item
+                      label="激活钉钉登录"
+                      name={["dd", "enable"]}
+                      valuePropName="checked"
+                    >
+                      <Checkbox
+                        onChange={(e) => {
+                          setDingTalkEnable(e.target.checked);
+                          void form.validateFields()
+                        }}
+                      />
+                    </Form.Item>
+                    {
+                      <>
+                        <Form.Item
+                          label="APP ID"
+                          name={["dd", "asd"]}
+                          rules={dingTalkEnable ? [...requiredRule] : undefined}
+                        >
+                          <Input />
+                        </Form.Item>
+                        <Form.Item
+                          label="APP Secret"
+                          name={["dd", "sda"]}
+                          rules={dingTalkEnable ? [...requiredRule] : undefined}
+                        >
+                          <Input.Password />
+                        </Form.Item>
+                      </>
+                    }
+                  </div>
+                  <div className="config-divider" />
+                  */}
+                  <div className="config-item">
+                    <Form.Item
+                      label="允许匿名"
+                      name={["authentication", "allow_anonymous"]}
+                      valuePropName="checked"
+                    >
+                      <Checkbox />
                     </Form.Item>
                   </div>
                 </Collapse.Panel>

@@ -1,52 +1,77 @@
-import "./App.scss";
-import React, { useState } from "react";
-import Console from "./components/Console";
-import Menu from "./components/Menu";
+import React, { Suspense } from "react";
+import {
+  Route,
+  Routes,
+  unstable_HistoryRouter as HistoryRouter,
+} from "react-router-dom";
+import Home from "./views/Home";
+import Login from "./views/Login";
+import { history } from "./utils";
 import Workbench from "./components/Workbench";
-import Users from "./components/Users";
-import Split from "./components/Split";
-import Config from "./components/Config";
+import { HomeOutlined, SettingOutlined, TeamOutlined } from "@ant-design/icons";
+import { Spin } from "antd";
+
+const Users = React.lazy(() => import("./components/Users"));
+const Config = React.lazy(() => import("./components/Config"));
+
+function withSuspense(Component: React.ReactNode) {
+  return (
+    <Suspense
+      fallback={
+        <Spin
+          size="large"
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        />
+      }
+    >
+      {Component}
+    </Suspense>
+  );
+}
+
+const routes = [
+  {
+    path: "/",
+    element: <Workbench />,
+    metadata: {
+      icon: <HomeOutlined />,
+    },
+  },
+  {
+    path: "/users",
+    element: withSuspense(<Users />),
+    metadata: {
+      icon: <TeamOutlined />,
+      admin: true,
+    },
+  },
+  {
+    path: "/config",
+    element: withSuspense(<Config />),
+    metadata: {
+      icon: <SettingOutlined />,
+      admin: true,
+    },
+  },
+];
 
 function App() {
-  const [currentMenu, setCurrentMenu] = useState(Menu.itemNames.WORKBENCH);
-  const [enableConsole, setEnabledConsole] = useState(false);
-
-  const onClickMenuItem = (name: string, selected: () => void) => {
-    switch (name) {
-      case Menu.itemNames.WORKBENCH:
-      case Menu.itemNames.USERS:
-      case Menu.itemNames.CONFIG:
-        setCurrentMenu(name);
-        selected();
-        break;
-      case Menu.itemNames.CONSOLE:
-        setEnabledConsole(true);
-        break;
-    }
-  };
-
   return (
-    <div className="layout">
-      <div className="layout-menu">
-        <Menu defaultItemName={currentMenu} onClickMenuItem={onClickMenuItem} />
-      </div>
-      <Split
-        className="layout-main"
-        sizes={enableConsole ? [70, 30] : undefined}
-        direction="vertical"
-      >
-        <div className="layout-main-part1">
-          {currentMenu === Menu.itemNames.WORKBENCH && <Workbench />}
-          {currentMenu === Menu.itemNames.USERS && <Users />}
-          {currentMenu === Menu.itemNames.CONFIG && <Config />}
-        </div>
-        {enableConsole && (
-          <div className="layout-main-part2">
-            <Console onClose={() => setEnabledConsole(false)} />
-          </div>
-        )}
-      </Split>
-    </div>
+    <HistoryRouter history={history}>
+      <Routes>
+        <Route path="/" element={<Home routes={routes} />}>
+          {routes.map((route, index) => (
+            <Route {...route} key={index} />
+          ))}
+        </Route>
+        <Route path="login" element={<Login />} />
+      </Routes>
+    </HistoryRouter>
   );
 }
 

@@ -1,15 +1,14 @@
 import sqlalchemy
-from sqlalchemy.ext.asyncio import AsyncSession
 
 import db
-from app.base import BaseHandler, admin_required
+from web.base import APIHandler, admin_required, not_authenticate
 from utils import gen_token
 
 
-class UsersHandler(BaseHandler):
+class UsersHandler(APIHandler):
     @admin_required
     async def get(self):
-        async with db.engine.connect() as conn:
+        async with db.async_session().bind.connect() as conn:
             result = await conn.execute(sqlalchemy.select(db.User))
             users = [dict(i) for i in result.fetchall()]
             self.write(dict(users=users))
@@ -18,26 +17,27 @@ class UsersHandler(BaseHandler):
     async def post(self):
         real_name = self.get_body_argument('real_name')
         group = self.get_body_argument('group', default=None) or None
-        async with AsyncSession(db.engine) as session:
+        async with db.async_session() as session:
             data = dict(real_name=real_name, token=gen_token(), group=group)
             await session.execute(sqlalchemy.insert(db.User).values(**data))
             await session.commit()
         await self.finish(data)
 
 
-class UserHandler(BaseHandler):
+class UserHandler(APIHandler):
     @admin_required
     async def delete(self, uid):
-        async with AsyncSession(db.engine) as session:
+        async with db.async_session() as session:
             await session.execute(sqlalchemy.delete(db.User).where(db.User.id == uid))
             await session.commit()
         await self.finish()
 
 
-class SignHandler(BaseHandler):
+class SignHandler(APIHandler):
+    @not_authenticate
     async def post(self):
         token = self.get_body_argument('token')
-        async with AsyncSession(db.engine) as session:
+        async with db.async_session() as session:
             result = await session.execute(sqlalchemy.select(db.User).where(db.User.token == token))
             user = result.scalar_one_or_none()
         if user:
@@ -45,11 +45,12 @@ class SignHandler(BaseHandler):
         else:
             await self.finish_error(errors={'token': '无效的令牌'})
 
+    @not_authenticate
     def delete(self):
         self.clear_cookie('sessionid')
 
 
-class MeHandler(BaseHandler):
+class MeHandler(APIHandler):
     async def get(self):
         user = await self.current_user
         if user:

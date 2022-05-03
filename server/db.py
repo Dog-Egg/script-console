@@ -1,18 +1,15 @@
-import asyncio
 import logging
 import os
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, String, Integer, select, insert
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, String, Integer, select, insert, Text
+from tornado.ioloop import IOLoop
 
-import settings
-from settings import DATA_DIR
+from conf import settings
 from utils import gen_token
 
-DB_FILE = os.path.join(DATA_DIR, 'sqlite.db')
-
-engine = create_async_engine('sqlite+aiosqlite:///%s' % DB_FILE, echo=False)
+async_session = sessionmaker(expire_on_commit=False, class_=AsyncSession)
 
 Base = declarative_base()
 
@@ -32,20 +29,31 @@ class User(Base):
         return self.group == settings.ADMINISTRATOR
 
 
+class Config(Base):
+    __tablename__ = 'config'
+
+    version = Column(String(length=8), primary_key=True, default='v1')
+    data = Column(Text, nullable=False)
+
+
 def init():
-    os.makedirs(DATA_DIR, exist_ok=True)
+    engine = create_async_engine('sqlite+aiosqlite:///%s' % os.path.join(settings.DATA_DIR, 'sqlite.db'))
+    async_session.configure(bind=engine)
+
+    os.makedirs(settings.DATA_DIR, exist_ok=True)
 
     async def main():
         async with engine.begin() as conn:
             # await conn.run_sync(Base.metadata.drop_all)  # test
             await conn.run_sync(Base.metadata.create_all)
 
-        async with AsyncSession(engine) as session:
-            result = await session.execute(select(User).where(User.real_name == 'admin'))
+        async with async_session() as session:
+            result = await session.execute(select(User).where(User.id == 1))
             admin: User = result.scalar_one_or_none()
-            if not admin or not admin.is_admin:
+            if not admin:
                 token = gen_token()
                 await session.execute(insert(User).values(
+                    id=1,
                     real_name='admin',
                     token=token,
                     group=settings.ADMINISTRATOR)
@@ -53,11 +61,6 @@ def init():
                 await session.commit()
             else:
                 token = admin.token
-            logger.info('Admin Token: %s', token)
+        return token
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-
-
-if __name__ == '__main__':
-    init()
+    return IOLoop.current().run_sync(main)

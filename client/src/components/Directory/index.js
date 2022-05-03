@@ -1,5 +1,5 @@
 import { Tree, Dropdown, Menu, Modal } from "antd";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   downloadFile,
   getDirectoryTree,
@@ -27,17 +27,17 @@ import {
 } from "@ant-design/icons";
 import prompt from "../Prompt";
 import * as nodePath from "path";
-import { UserContext } from "../../ctx";
 import CodeEditor from "../CodeEditor";
 import { Steps as IntroSteps } from "intro.js-react";
 import "intro.js/introjs.css";
 import "./style.scss";
+import { useCurrentUser } from "../../utils/hooks";
 
 const { DirectoryTree } = Tree;
 
 export default function Directory({ onRunScript, onSelect }) {
-  const currentUser = useContext(UserContext);
-  const [treeData, setTreeData] = useState();
+  const currentUser = useCurrentUser();
+  const [treeData, setTreeData] = useState([]);
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [selectedNode, setSelectedNode] = useState();
 
@@ -68,11 +68,11 @@ export default function Directory({ onRunScript, onSelect }) {
   }, []);
   useEffect(() => {
     if (selectedKeys.length) {
-      window.location.hash = selectedKeys[0];
+      window.history.replaceState("", "", `#${selectedKeys[0]}`);
     }
   }, [selectedKeys]);
 
-  const directoryTree = treeData && (
+  const directoryTree = Boolean(treeData.length) && (
     <DirectoryTree
       defaultExpandedKeys={[selectedKeys]}
       icon={function (node) {

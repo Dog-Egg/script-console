@@ -2,29 +2,23 @@ import json
 import traceback
 
 import pydantic
-import yaml
 from tornado.web import HTTPError
 
-import config
-import settings
-from .base import BaseHandler, admin_required
+import db
+from sqlalchemy.dialects.sqlite import insert
+from web.base import APIHandler, admin_required
 
 
-class ConfigHandler(BaseHandler):
-    CONFIG_PATH = settings.CONFIG_FILE_PATH
-
+class ConfigHandler(APIHandler):
     @admin_required
     def get(self):
-        self._finish()
-
-    def _finish(self):
         error = self.config.error
         if isinstance(self.config.error, Exception):
             error = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-        self.finish({'data': self.config.data, 'error': error})
+        self.finish({'data': self.config.to_dict(), 'error': error})
 
     @admin_required
-    def put(self):
+    async def put(self):
         error = HTTPError(400)
         try:
             data = json.loads(self.request.body)
@@ -35,10 +29,13 @@ class ConfigHandler(BaseHandler):
             raise error
 
         try:
-            model = config.ConfigModel(**data)
+            self.config.read_dict(data)
         except pydantic.ValidationError:
             raise error
 
-        with open(settings.CONFIG_FILE_PATH, 'w') as fp:
-            yaml.dump(model.dict(), stream=fp, Dumper=yaml.CDumper)
-        self._finish()
+        async with db.async_session() as session:
+            stmt = insert(db.Config).values(version='v1', data=self.config.to_json())
+            stmt = stmt.on_conflict_do_update(index_elements=['version'], set_={'data': self.config.to_json()})
+            await session.execute(stmt)
+            await session.commit()
+        await self.finish()

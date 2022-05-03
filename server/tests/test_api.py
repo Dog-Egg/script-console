@@ -9,9 +9,10 @@ from unittest import mock
 from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application
 
-import settings
-from app import make_app
-from app.base import BaseHandler
+import db
+from conf import settings
+from web import make_app
+from web.base import APIHandler
 from db import User
 from fs import FileSystem
 
@@ -26,6 +27,10 @@ class MockAdminUser:
 
 
 class TestFile(AsyncHTTPTestCase):
+    @classmethod
+    def setUpClass(cls):
+        settings.freeze()
+        db.init()
 
     def setUp(self):
         super().setUp()
@@ -39,7 +44,7 @@ class TestFile(AsyncHTTPTestCase):
 
         self.__fs = FileSystem(tmp_dir.name)
         self.__patch = mock.patch.multiple(
-            BaseHandler,
+            APIHandler,
             get_current_user=mock1,
             fs=self.__fs,
         )

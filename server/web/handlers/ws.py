@@ -10,13 +10,13 @@ import traceback
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
-import settings
-from app.base import BaseHandler, admin_required
+from conf import settings
+from web.base import APIHandler, admin_required
 
 logger = logging.getLogger(__name__)
 
 
-class PtyHandler(WebSocketHandler, BaseHandler):
+class PtyHandler(WebSocketHandler, APIHandler):
     pid: int
     fd: int
     subprocess_finished: bool
@@ -85,7 +85,7 @@ class PtyHandler(WebSocketHandler, BaseHandler):
 class RunScriptHandler(PtyHandler):
     path: str
 
-    def prepare(self):
+    async def prepare(self):
         self.path = self.get_argument('script')
 
     def subprocess(self):
