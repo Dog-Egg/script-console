@@ -7,6 +7,7 @@ node_modules/
 # Project
 server/data/
 server/scripts/
+client/build/
 
 # Other
 .idea/

@@ -11,4 +11,7 @@ DATA_DIR = os.path.join(os.getcwd(), 'data')
 
 COOKIE_SECRET = secrets.token_hex()
 
+# 静态文件目录
+STATIC_ROOT = '/var/www/html/script-console'
+
 ADMINISTRATOR: readonly = 'admin'

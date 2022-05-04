@@ -1,8 +1,21 @@
-from tornado.web import Application, StaticFileHandler
+import os.path
+
+from tornado.web import Application, StaticFileHandler as _StaticFileHandler, HTTPError
 
 from conf import settings, Config
 from fs import FileSystem
 from .handlers import auth, config, file, ws
+
+
+class StaticFileHandler(_StaticFileHandler):
+    def validate_absolute_path(self, *args, **kwargs):
+        # handle SPA router: history mode
+        try:
+            return super().validate_absolute_path(*args, **kwargs)
+        except HTTPError as exc:
+            if exc.status_code == 404:
+                return os.path.join(self.root, self.default_filename)
+            raise
 
 
 def make_app():
@@ -33,7 +46,7 @@ def make_app():
             (r'/ws/console', ws.ConsoleHandler),
 
             # static
-            (r'/((?!api|ws).*)', StaticFileHandler, dict(path='/var/www/html/script-console',
+            (r'/((?!api|ws).*)', StaticFileHandler, dict(path=settings.STATIC_ROOT,
                                                          default_filename='index.html')
              ),
         ],
